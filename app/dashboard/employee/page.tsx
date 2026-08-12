@@ -1,13 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 
+interface User {
+  id: string;
+  name: string;
+  role: string;
+  department: string;
+}
+
+interface PendingAssessment {
+  id: string;
+  assessment_id: string;
+  due_date: string;
+}
+
 export default function EmployeeDashboard() {
-  const [user, setUser] = useState<any>(null);
-  const [pendingAssessments, setPendingAssessments] = useState(0);
+  const [user, setUser] = useState<User | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -15,9 +28,14 @@ export default function EmployeeDashboard() {
     if (!userData) {
       router.push('/login');
     } else {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
-      fetchPendingAssessments(parsedUser.id);
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        fetchPendingAssessments(parsedUser.id);
+      } catch (err) {
+        console.error('Error parsing user:', err);
+        router.push('/login');
+      }
     }
   }, [router]);
 
@@ -25,14 +43,14 @@ export default function EmployeeDashboard() {
     try {
       const { data, error } = await supabase
         .from('assessment_assignments')
-        .select('id')
+        .select('*')
         .eq('assigned_to', userId)
         .eq('status', 'pending');
 
       if (error) throw error;
-      setPendingAssessments(data?.length || 0);
+      setPendingCount(data?.length || 0);
     } catch (err) {
-      console.error('Error fetching pending assessments:', err);
+      console.error('Error fetching assessments:', err);
     }
   }
 
@@ -41,139 +59,151 @@ export default function EmployeeDashboard() {
     router.push('/login');
   }
 
-  function getFirstName() {
-    if (!user?.name) return 'Employee';
-    // Handle "Lastname, Firstname" format
-    if (user.name.includes(',')) {
-      return user.name.split(',')[1]?.trim() || user.name;
-    }
-    // Handle "Firstname Lastname" format
-    return user.name.split(' ')[0];
-  }
-
   if (!user) return <div className="p-8 text-center">Loading...</div>;
+
+  const firstName = user.name.split(',')[1]?.trim() || user.name;
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
-          <Image 
-            src="/ldr.logo.png" 
-            alt="LDR Logo" 
-            width={80} 
-            height={80}
-          />
+      <header className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <Image src="/ldr.logo.png" alt="LDR Logo" width={50} height={50} />
+            <h1 className="text-2xl font-bold">LDR HR Portal</h1>
+          </div>
           <button
             onClick={handleLogout}
             style={{ backgroundColor: '#f89939' }}
-            className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90 transition"
+            className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90"
           >
             Logout
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <h1 className="text-3xl font-bold mb-1" style={{ color: '#f89939' }}>
-          Welcome, {getFirstName()}
-        </h1>
-        <p className="text-gray-600 mb-8">Employee Dashboard</p>
+      <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-4 gap-6">
+        {/* Sidebar */}
+        <aside className="col-span-1">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="font-bold text-lg mb-6" style={{ color: '#f89939' }}>
+              Welcome, {firstName}
+            </h2>
 
-        {/* Pending Assessments Notification */}
-        {pendingAssessments > 0 && (
-          <div 
-            className="mb-8 p-6 bg-yellow-50 border-2 border-yellow-400 rounded-lg cursor-pointer hover:bg-yellow-100 transition"
-            onClick={() => router.push('/dashboard/employee/my-assessments')}
-          >
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-yellow-900 mb-1">📋 Pending Assessment{pendingAssessments !== 1 ? 's' : ''}</h2>
-                <p className="text-yellow-800">
-                  You have <span className="font-semibold">{pendingAssessments}</span> assessment{pendingAssessments !== 1 ? 's' : ''} waiting for completion.
-                </p>
-              </div>
-              <span className="text-3xl font-bold text-yellow-600">{pendingAssessments}</span>
-            </div>
-            <p className="text-sm text-yellow-700 mt-3">Click here to view and complete your assessments →</p>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Sidebar - Quick Access */}
-          <div className="lg:col-span-1">
-            <div className="space-y-4">
-              {/* My Assessments */}
-              <div 
-                className="bg-white p-4 rounded-lg shadow hover:shadow-lg transition cursor-pointer"
-                onClick={() => router.push('/dashboard/employee/my-assessments')}
+            <nav className="space-y-2">
+              
+                href="/dashboard/employee/my-assessments"
+                className="flex items-center px-4 py-2 text-gray-700 hover:bg-orange-50 rounded relative"
               >
-                <h3 className="font-semibold text-gray-800 mb-1">My Assessments</h3>
-                <p className="text-sm text-gray-600">View and sign</p>
-                {pendingAssessments > 0 && (
-                  <div className="mt-2 inline-block bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded">
-                    {pendingAssessments} pending
-                  </div>
+                ✓ My Assessments
+                {pendingCount > 0 && (
+                  <span
+                    style={{ backgroundColor: '#f89939' }}
+                    className="ml-auto text-white text-xs font-bold px-2 py-1 rounded-full"
+                  >
+                    {pendingCount}
+                  </span>
                 )}
-                <p className="text-xs text-orange-500 mt-2">→</p>
-              </div>
-
-              {/* My Reports */}
-              <div 
-                className="bg-white p-4 rounded-lg shadow hover:shadow-lg transition cursor-pointer"
-                onClick={() => router.push('/dashboard/employee/my-reports')}
+              </a>
+              
+                href="/dashboard/employee/my-reports"
+                className="flex items-center px-4 py-2 text-gray-700 hover:bg-orange-50 rounded"
               >
-                <h3 className="font-semibold text-gray-800 mb-1">My Reports</h3>
-                <p className="text-sm text-gray-600">View submitted</p>
-                <p className="text-xs text-orange-500 mt-2">→</p>
-              </div>
+                📋 My Reports
+              </a>
+              
+                href="/dashboard/employee/documents"
+                className="flex items-center px-4 py-2 text-gray-700 hover:bg-orange-50 rounded"
+              >
+                📄 HR Documents
+              </a>
+            </nav>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="col-span-3 space-y-6">
+          {/* Pending Assessments Banner */}
+          {pendingCount > 0 && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded">
+              <p className="font-semibold text-yellow-800">
+                📌 You have {pendingCount} pending assessment{pendingCount > 1 ? 's' : ''} to complete
+              </p>
+              
+                href="/dashboard/employee/my-assessments"
+                className="text-yellow-600 hover:text-yellow-800 font-semibold mt-2 inline-block"
+              >
+                View assessments →
+              </a>
+            </div>
+          )}
+
+          {/* Welcome Card */}
+          <div className="bg-white rounded-lg shadow p-8">
+            <h1 className="text-4xl font-bold mb-2" style={{ color: '#f89939' }}>
+              Welcome, {firstName}!
+            </h1>
+            <p className="text-gray-600">
+              Complete your assessments, submit reports, and stay updated with company documents.
+            </p>
+          </div>
+
+          {/* Submit a Report Section */}
+          <div className="bg-white rounded-lg shadow p-8">
+            <h2 className="text-2xl font-bold mb-6" style={{ color: '#f89939' }}>
+              Submit a Report
+            </h2>
+            <div className="grid grid-cols-3 gap-4">
+              
+                href="/dashboard/employee/report-hazard"
+                style={{ backgroundColor: '#f89939' }}
+                className="px-6 py-4 text-white rounded-lg font-semibold hover:opacity-90 text-center"
+              >
+                ⚠️ Hazard Report
+              </a>
+              
+                href="/dashboard/employee/report-incident"
+                style={{ backgroundColor: '#f89939' }}
+                className="px-6 py-4 text-white rounded-lg font-semibold hover:opacity-90 text-center"
+              >
+                🚨 Incident Report
+              </a>
+              
+                href="/dashboard/employee/report-nearmiss"
+                style={{ backgroundColor: '#f89939' }}
+                className="px-6 py-4 text-white rounded-lg font-semibold hover:opacity-90 text-center"
+              >
+                ⚡ Near-Miss Report
+              </a>
             </div>
           </div>
 
-          {/* Right Content - Report Buttons */}
-          <div className="lg:col-span-2">
-            <div className="bg-white p-8 rounded-lg shadow">
-              <h2 className="text-2xl font-bold mb-2" style={{ color: '#f89939' }}>Submit a Report</h2>
-              <p className="text-gray-600 mb-6">Choose a report type to submit</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Report Hazard */}
-                <div 
-                  className="border-2 border-gray-200 p-6 rounded-lg hover:border-orange-400 hover:shadow-lg transition cursor-pointer text-center"
-                  onClick={() => router.push('/dashboard/employee/report-hazard')}
-                >
-                  <div className="text-4xl mb-3">⚠️</div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Report Hazard</h3>
-                  <p className="text-sm text-gray-600">Identify a potential danger</p>
-                  <p className="text-sm text-orange-500 font-semibold mt-4">→ Report</p>
-                </div>
-
-                {/* Report Incident */}
-                <div 
-                  className="border-2 border-gray-200 p-6 rounded-lg hover:border-orange-400 hover:shadow-lg transition cursor-pointer text-center"
-                  onClick={() => router.push('/dashboard/employee/report-incident')}
-                >
-                  <div className="text-4xl mb-3">🚨</div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Report Incident</h3>
-                  <p className="text-sm text-gray-600">Report an accident with injury</p>
-                  <p className="text-sm text-orange-500 font-semibold mt-4">→ Report</p>
-                </div>
-
-                {/* Report Near-Miss */}
-                <div 
-                  className="border-2 border-gray-200 p-6 rounded-lg hover:border-orange-400 hover:shadow-lg transition cursor-pointer text-center"
-                  onClick={() => router.push('/dashboard/employee/report-nearmiss')}
-                >
-                  <div className="text-4xl mb-3">💡</div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Report Near-Miss</h3>
-                  <p className="text-sm text-gray-600">Report what could have happened</p>
-                  <p className="text-sm text-orange-500 font-semibold mt-4">→ Report</p>
-                </div>
-              </div>
+          {/* My Assessments Quick Link */}
+          {pendingCount > 0 && (
+            <div className="bg-white rounded-lg shadow p-8">
+              <h2 className="text-2xl font-bold mb-4" style={{ color: '#f89939' }}>
+                Pending Assessments
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Please complete your assigned assessments by the due date.
+              </p>
+              
+                href="/dashboard/employee/my-assessments"
+                style={{ backgroundColor: '#f89939' }}
+                className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 inline-block"
+              >
+                Complete Assessments →
+              </a>
             </div>
+          )}
+
+          {/* Quick Info */}
+          <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
+            <p className="text-blue-900 font-semibold">
+              💡 Need help? Check the HR Documents section for policies and guidelines.
+            </p>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
