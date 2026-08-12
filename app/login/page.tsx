@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 
@@ -10,7 +9,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const router = useRouter();
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -18,17 +16,31 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      console.log('Attempting login with:', email);
+      
       const { data, error: fetchError } = await supabase
         .from('employees')
         .select('id, name, email, role, department')
         .eq('email', email)
         .single();
 
-      if (fetchError || !data) {
+      console.log('Query result:', { data, fetchError });
+
+      if (fetchError) {
+        console.error('Query error:', fetchError);
         setError('Invalid email or password');
         setLoading(false);
         return;
       }
+
+      if (!data) {
+        console.error('No data returned');
+        setError('Invalid email or password');
+        setLoading(false);
+        return;
+      }
+
+      console.log('Employee found:', data);
 
       if (password !== 'password123') {
         setError('Invalid email or password');
