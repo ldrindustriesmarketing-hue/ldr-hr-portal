@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { getDashboardStats } from '@/lib/stats';
 
 interface User {
   id: string;
@@ -11,8 +12,24 @@ interface User {
   department: string;
 }
 
+interface Stats {
+  hazardReports: number;
+  incidentReports: number;
+  nearmissReports: number;
+  pendingAssessments: number;
+  signedAssessments: number;
+}
+
 export default function ManagerDashboard() {
   const [user, setUser] = useState<User | null>(null);
+  const [stats, setStats] = useState<Stats>({
+    hazardReports: 0,
+    incidentReports: 0,
+    nearmissReports: 0,
+    pendingAssessments: 0,
+    signedAssessments: 0
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -22,12 +39,25 @@ export default function ManagerDashboard() {
     } else {
       try {
         setUser(JSON.parse(userData));
+        fetchStats();
       } catch (err) {
         console.error('Error parsing user:', err);
         router.push('/login');
       }
     }
   }, [router]);
+
+  async function fetchStats() {
+    try {
+      setLoadingStats(true);
+      const dashboardStats = await getDashboardStats();
+      setStats(dashboardStats);
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+    } finally {
+      setLoadingStats(false);
+    }
+  }
 
   function handleLogout() {
     localStorage.removeItem('user');
@@ -105,18 +135,26 @@ export default function ManagerDashboard() {
             <p className="text-gray-600">Manage your team's assessments, view reports, and maintain compliance.</p>
           </div>
 
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 gap-6">
             <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-600 text-sm font-semibold uppercase">Hazard Reports</p>
-              <p className="text-4xl font-bold mt-2" style={{ color: '#f89939' }}>0</p>
+              <p className="text-4xl font-bold mt-2" style={{ color: '#f89939' }}>{loadingStats ? '-' : stats.hazardReports}</p>
+              <p className="text-xs text-gray-500 mt-2">Submitted status</p>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <p className="text-gray-600 text-sm font-semibold uppercase">Incident Reports</p>
+              <p className="text-4xl font-bold mt-2" style={{ color: '#f89939' }}>{loadingStats ? '-' : stats.incidentReports}</p>
+              <p className="text-xs text-gray-500 mt-2">Submitted status</p>
+            </div>
+            <div className="bg-white rounded-lg shadow p-6">
+              <p className="text-gray-600 text-sm font-semibold uppercase">Near-Miss Reports</p>
+              <p className="text-4xl font-bold mt-2" style={{ color: '#f89939' }}>{loadingStats ? '-' : stats.nearmissReports}</p>
+              <p className="text-xs text-gray-500 mt-2">Submitted status</p>
             </div>
             <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-600 text-sm font-semibold uppercase">Pending Assessments</p>
-              <p className="text-4xl font-bold mt-2" style={{ color: '#f89939' }}>0</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <p className="text-gray-600 text-sm font-semibold uppercase">Signed Assessments</p>
-              <p className="text-4xl font-bold mt-2" style={{ color: '#f89939' }}>0</p>
+              <p className="text-4xl font-bold mt-2" style={{ color: '#f89939' }}>{loadingStats ? '-' : stats.pendingAssessments}</p>
+              <p className="text-xs text-gray-500 mt-2">Awaiting completion</p>
             </div>
           </div>
 
@@ -154,7 +192,7 @@ export default function ManagerDashboard() {
           </div>
 
           <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
-            <p className="text-blue-900 font-semibold">💡 Tip: Managers can now submit hazard, incident, and near-miss reports just like employees. All reports are automatically logged in the Audit Trail for compliance.</p>
+            <p className="text-blue-900 font-semibold">💡 Stats update in real-time. Refresh the page to see the latest numbers.</p>
           </div>
         </main>
       </div>
