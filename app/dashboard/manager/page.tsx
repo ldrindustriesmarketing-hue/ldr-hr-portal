@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { supabase } from '@/lib/supabase';
 
 interface User {
   id: string;
@@ -39,7 +38,6 @@ export default function ManagerDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
@@ -57,7 +55,6 @@ export default function ManagerDashboard() {
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-4 gap-6">
-        {/* Sidebar */}
         <aside className="col-span-1">
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="font-bold text-lg mb-6" style={{ color: '#f89939' }}>
@@ -65,43 +62,26 @@ export default function ManagerDashboard() {
             </h2>
 
             <nav className="space-y-2">
-              
-                href="/dashboard/manager/all-reports"
-                className="flex items-center px-4 py-2 text-gray-700 hover:bg-orange-50 rounded"
-              >
+              <a href="/dashboard/manager/all-reports" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">
                 📋 All Reports
               </a>
-              
-                href="/dashboard/manager/create-risk-assessment"
-                className="flex items-center px-4 py-2 text-gray-700 hover:bg-orange-50 rounded"
-              >
+              <a href="/dashboard/manager/create-risk-assessment" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">
                 ➕ Create Risk Assessment
               </a>
-              
-                href="/dashboard/manager/create-chemical-assessment"
-                className="flex items-center px-4 py-2 text-gray-700 hover:bg-orange-50 rounded"
-              >
+              <a href="/dashboard/manager/create-chemical-assessment" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">
                 ➕ Create Chemical Assessment
               </a>
-              
-                href="/dashboard/manager/assign-assessments"
-                className="flex items-center px-4 py-2 text-gray-700 hover:bg-orange-50 rounded"
-              >
+              <a href="/dashboard/manager/assign-assessments" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">
                 ✓ Assign Assessments
               </a>
-              
-                href="/dashboard/manager/documents"
-                className="flex items-center px-4 py-2 text-gray-700 hover:bg-orange-50 rounded"
-              >
+              <a href="/dashboard/manager/documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">
                 📄 HR Documents
               </a>
             </nav>
           </div>
         </aside>
 
-        {/* Main Content */}
         <main className="col-span-3 space-y-6">
-          {/* Welcome Card */}
           <div className="bg-white rounded-lg shadow p-8">
             <h1 className="text-4xl font-bold mb-2" style={{ color: '#f89939' }}>
               Welcome back!
@@ -111,7 +91,6 @@ export default function ManagerDashboard() {
             </p>
           </div>
 
-          {/* Quick Stats */}
           <div className="grid grid-cols-3 gap-6">
             <div className="bg-white rounded-lg shadow p-6">
               <p className="text-gray-600 text-sm font-semibold uppercase">Hazard Reports</p>
@@ -127,7 +106,6 @@ export default function ManagerDashboard() {
             </div>
           </div>
 
-          {/* Quick Actions */}
           <div className="bg-white rounded-lg shadow p-8">
             <h2 className="text-2xl font-bold mb-6" style={{ color: '#f89939' }}>
               Quick Actions
