@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// Get SharePoint access token
 async function getSharePointToken() {
   const tokenUrl = `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/oauth2/v2.0/token`;
 
@@ -17,36 +16,46 @@ async function getSharePointToken() {
     body: body
   });
 
+  if (!response.ok) {
+    throw new Error('Failed to get SharePoint token');
+  }
+
   const data = await response.json();
   return data.access_token;
 }
 
-// Upload file to SharePoint
 async function uploadToSharePoint(file: File, fileName: string) {
-  const token = await getSharePointToken();
+  try {
+    const token = await getSharePointToken();
 
-  const siteName = process.env.SHAREPOINT_SITE_NAME;
-  const siteId = process.env.SHAREPOINT_SITE_ID;
+    const siteName = process.env.SHAREPOINT_SITE_NAME;
+    const siteId = process.env.SHAREPOINT_SITE_ID;
 
-  const uploadUrl = `https://graph.microsoft.com/v1.0/sites/${siteName}.sharepoint.com:/sites/${siteId}:/drive/root:/HR%20Documents/${fileName}:/content`;
+    const uploadUrl = `https://graph.microsoft.com/v1.0/sites/${siteName}.sharepoint.com:/sites/${siteId}:/drive/root:/%5B03-09-01%20Policies%5D/${fileName}:/content`;
 
-  const arrayBuffer = await file.arrayBuffer();
+    const arrayBuffer = await file.arrayBuffer();
 
-  const uploadResponse = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': file.type
-    },
-    body: arrayBuffer
-  });
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': file.type || 'application/octet-stream'
+      },
+      body: arrayBuffer
+    });
 
-  if (!uploadResponse.ok) {
-    throw new Error('SharePoint upload failed');
+    if (!uploadResponse.ok) {
+      const errorData = await uploadResponse.text();
+      console.error('SharePoint upload error:', errorData);
+      throw new Error(`SharePoint upload failed: ${uploadResponse.status}`);
+    }
+
+    const uploadedFile = await uploadResponse.json();
+    return uploadedFile.webUrl;
+  } catch (err) {
+    console.error('SharePoint upload error:', err);
+    throw err;
   }
-
-  const uploadedFile = await uploadResponse.json();
-  return uploadedFile.webUrl;
 }
 
 export async function POST(request: NextRequest) {
@@ -62,15 +71,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Upload to SharePoint
+    if (!title) {
+      return NextResponse.json({ error: 'No title provided' }, { status: 400 });
+    }
+
+    console.log(`Uploading file: ${file.name} to SharePoint`);
+
     const sharePointUrl = await uploadToSharePoint(file, file.name);
 
-    // Save metadata to Supabase
+    console.log(`File uploaded to SharePoint: ${sharePointUrl}`);
+
     const { data, error } = await supabase
       .from('documents')
       .insert({
         title,
-        description,
+        description: description || null,
         sharepoint_url: sharePointUrl,
         file_name: file.name,
         uploaded_by: userId,
@@ -78,11 +93,14 @@ export async function POST(request: NextRequest) {
       })
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database insert error:', error);
+      throw error;
+    }
 
     return NextResponse.json({ success: true, document: data[0] });
   } catch (err) {
     console.error('Upload error:', err);
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Upload failed: ' + String(err) }, { status: 500 });
   }
-}   
+}
