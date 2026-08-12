@@ -53,10 +53,14 @@ export default function ManagerDashboard() {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="font-bold text-lg mb-6" style={{ color: '#f89939' }}>Welcome, {user.name.split(',')[1]?.trim() || user.name}</h2>
             <nav className="space-y-2">
-              <a href="/dashboard/manager/all-reports" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">📋 All Reports</a>
+              <a href="/dashboard/manager/all-reports" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">📋 Hazard Reports</a>
+              <a href="/dashboard/manager/all-incidents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">🚨 Incident Reports</a>
+              <a href="/dashboard/manager/all-nearmiss" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">⚡ Near-Miss Reports</a>
+              <hr className="my-4" />
               <a href="/dashboard/manager/create-risk-assessment" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">➕ Create Risk Assessment</a>
               <a href="/dashboard/manager/create-chemical-assessment" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">➕ Create Chemical Assessment</a>
               <a href="/dashboard/manager/assign-assessments" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">✓ Assign Assessments</a>
+              <hr className="my-4" />
               <a href="/dashboard/manager/documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">📄 HR Documents</a>
             </nav>
           </div>
@@ -88,7 +92,13 @@ export default function ManagerDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <a href="/dashboard/manager/create-risk-assessment" style={{ backgroundColor: '#f89939' }} className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 text-center">➕ New Risk Assessment</a>
               <a href="/dashboard/manager/assign-assessments" style={{ backgroundColor: '#f89939' }} className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 text-center">✓ Assign Assessments</a>
+              <a href="/dashboard/manager/all-reports" style={{ backgroundColor: '#f89939' }} className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 text-center">📋 View All Reports</a>
+              <a href="/dashboard/manager/documents" style={{ backgroundColor: '#f89939' }} className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 text-center">📄 HR Documents</a>
             </div>
+          </div>
+
+          <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
+            <p className="text-blue-900 font-semibold">💡 Tip: Check Hazard, Incident, and Near-Miss reports to stay on top of workplace safety.</p>
           </div>
         </main>
       </div>
