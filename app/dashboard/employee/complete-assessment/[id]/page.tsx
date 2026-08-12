@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Script from 'next/script';
 import { supabase } from '@/lib/supabase';
+import { logAudit } from '@/lib/audit';
 
 interface Question {
   id: string;
@@ -11,432 +11,219 @@ interface Question {
   type: 'yes-no' | 'text' | 'rating';
 }
 
-interface Answer {
-  [key: string]: string | number;
+interface Assignment {
+  id: string;
+  assessment_id: string;
+  assessment_type: 'risk' | 'chemical';
 }
 
 export default function CompleteAssessmentPage() {
   const params = useParams();
   const assignmentId = params.id as string;
-  const router = useRouter();
-
-  const [user, setUser] = useState<any>(null);
-  const [assessment, setAssessment] = useState<any>(null);
+  const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [answers, setAnswers] = useState<Answer>({});
+  const [responses, setResponses] = useState<Record<string, any>>({});
+  const [signature, setSignature] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
-  const [signatureData, setSignatureData] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (!userData) {
       router.push('/login');
-    } else {
-      setUser(JSON.parse(userData));
-      fetchAssessmentDetails(assignmentId, JSON.parse(userData).id);
+      return;
     }
-  }, [assignmentId, router]);
+    fetchAssessment();
+  }, [router]);
 
-  // Initialize canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.width = 600;
-      canvas.height = 180;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = '#1f2937';
-        ctx.lineWidth = 2.5;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-      }
-    }
-  }, []);
-
-  async function fetchAssessmentDetails(assignmentId: string, userId: string) {
+  async function fetchAssessment() {
     try {
-      // Fetch assignment
-      const { data: assignmentData, error: assignmentError } = await supabase
-        .from('assessment_assignments')
-        .select('assessment_id, assessment_type')
-        .eq('id', assignmentId)
-        .eq('assigned_to', userId)
-        .single();
+      const { data: assignData, error: assignError } = await supabase.from('assessment_assignments').select('*').eq('id', assignmentId).single();
 
-      if (assignmentError) throw assignmentError;
+      if (assignError) throw assignError;
+      setAssignment(assignData);
 
-      // Fetch assessment
-      const table = assignmentData.assessment_type === 'risk' ? 'risk_assessments' : 'chemical_assessments';
-      const { data: assessmentData, error: assessmentError } = await supabase
-        .from(table)
-        .select('*')
-        .eq('id', assignmentData.assessment_id)
-        .single();
+      const table = assignData.assessment_type === 'risk' ? 'risk_assessments' : 'chemical_assessments';
+      const { data: assessData, error: assessError } = await supabase.from(table).select('content').eq('id', assignData.assessment_id).single();
 
-      if (assessmentError) throw assessmentError;
-
-      setAssessment(assessmentData);
-      setQuestions(assessmentData.content || []);
+      if (assessError) throw assessError;
+      setQuestions(assessData.content || []);
     } catch (err) {
       console.error('Error fetching assessment:', err);
-      alert('Failed to load assessment');
-      router.push('/dashboard/employee/my-assessments');
+      setError('Failed to load assessment');
     } finally {
       setLoading(false);
     }
   }
 
-  function handleAnswerChange(questionId: string, value: string | number) {
-    setAnswers({
-      ...answers,
-      [questionId]: value
-    });
+  function updateResponse(questionId: string, value: any) {
+    setResponses((prev) => ({ ...prev, [questionId]: value }));
   }
 
-  function startDrawing(e: React.MouseEvent<HTMLCanvasElement>) {
+  function startSignature() {
+    if (!canvasRef.current) return;
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    setIsDrawing(true);
     const ctx = canvas.getContext('2d');
-    if (ctx) {
-      const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-    }
-  }
+    if (!ctx) return;
 
-  function draw(e: React.MouseEvent<HTMLCanvasElement>) {
-    if (!isDrawing) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
+    let isDrawing = false;
+
+    canvas.onmousedown = () => { isDrawing = true; };
+    canvas.onmouseup = () => { isDrawing = false; };
+    canvas.onmousemove = (e) => {
+      if (!isDrawing) return;
       const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
       ctx.lineTo(x, y);
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
       ctx.stroke();
-    }
-  }
-
-  function stopDrawing() {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.closePath();
-      }
-      setSignatureData(canvas.toDataURL('image/png'));
-    }
-    setIsDrawing(false);
+    };
   }
 
   function clearSignature() {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = '#1f2937';
-        ctx.lineWidth = 2.5;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-      }
-      setSignatureData(null);
+    if (!canvasRef.current) return;
+    const ctx = canvasRef.current.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      setSignature('');
     }
+  }
+
+  function captureSignature() {
+    if (!canvasRef.current) return;
+    setSignature(canvasRef.current.toDataURL());
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError('');
 
-    if (!acknowledged) {
-      alert('Please acknowledge that you have read and understood this assessment');
-      return;
-    }
-
-    if (!signatureData) {
-      alert('Please provide your digital signature');
+    if (!signature || !acknowledged) {
+      setError('Please sign and acknowledge the assessment');
       return;
     }
 
     setSubmitting(true);
 
     try {
-      if (!user) {
-        router.push('/login');
-        return;
-      }
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
 
-      // Store responses
-      const { error: responseError } = await supabase
+      const { data, error: insertError } = await supabase
         .from('assessment_responses')
-        .insert([
-          {
-            assignment_id: assignmentId,
-            employee_id: user.id,
-            checkbox_acknowledged: acknowledged,
-            signature_data: signatureData,
-            signed_date: new Date().toISOString(),
-            responses: answers
-          }
-        ]);
+        .insert({
+          assignment_id: assignmentId,
+          employee_id: userData.id,
+          responses: responses,
+          signature_data: signature,
+          checkbox_acknowledged: acknowledged,
+          signed_date: new Date().toISOString()
+        })
+        .select();
 
-      if (responseError) throw responseError;
+      if (insertError) throw insertError;
 
-      // Update assignment status
-      const { error: updateError } = await supabase
-        .from('assessment_assignments')
-        .update({ status: 'signed' })
-        .eq('id', assignmentId);
+      await supabase.from('assessment_assignments').update({ status: 'signed' }).eq('id', assignmentId);
 
-      if (updateError) throw updateError;
+      await logAudit(
+        'assessment_signed',
+        userData.id,
+        assignmentId,
+        'assessment_response',
+        { assessment_type: assignment?.assessment_type, acknowledged: acknowledged }
+      );
 
-      // Send emails to managers
-      try {
-        const { data: managers } = await supabase
-          .from('employees')
-          .select('email, name')
-          .in('role', ['manager', 'admin']);
-
-        for (const manager of managers || []) {
-          await fetch('/api/emails', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'assessment-signed',
-              managerEmail: manager.email,
-              managerName: manager.name,
-              employeeName: user?.name || 'Employee',
-              assessmentTitle: assessment?.title || 'Assessment'
-            })
-          });
-        }
-      } catch (emailError) {
-        console.error('Email send error:', emailError);
-      }
-
-      setSuccess(true);
-
-      setTimeout(() => {
-        router.push('/dashboard/employee/my-assessments');
-      }, 2000);
-    } catch (err: any) {
+      router.push('/dashboard/employee/my-assessments');
+    } catch (err) {
       console.error('Error submitting assessment:', err);
-      alert(`Failed to submit assessment: ${err.message}`);
+      setError('Failed to submit assessment');
+    } finally {
       setSubmitting(false);
     }
   }
 
-  if (success) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md">
-          <div className="text-4xl mb-4">✓</div>
-          <h1 className="text-2xl font-bold mb-2" style={{ color: '#f89939' }}>
-            Assessment Signed
-          </h1>
-          <p className="text-gray-600 mb-4">
-            Your assessment has been successfully submitted and signed. Management has been notified.
-          </p>
-          <p className="text-sm text-gray-500">Redirecting to assessments...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading || !assessment) return <div className="p-8 text-center">Loading assessment...</div>;
+  if (loading) return <div className="p-8 text-center">Loading assessment...</div>;
+  if (!assignment) return <div className="p-8 text-center">Assessment not found</div>;
 
   return (
-    <>
-      <Script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" />
-      <Script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" />
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-2xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold" style={{ color: '#f89939' }}>Complete Assessment</h1>
+          <button onClick={() => router.back()} className="text-gray-600 hover:text-gray-800 font-semibold">← Back</button>
+        </div>
 
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-4xl mx-auto">
-          <button
-            onClick={() => router.push('/dashboard/employee/my-assessments')}
-            className="mb-6 text-gray-600 hover:text-gray-800 flex items-center font-semibold"
-          >
-            ← Back to Assessments
-          </button>
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700">{error}</p>
+            </div>
+          )}
 
-          <div className="bg-white p-8 rounded-lg shadow">
-            <h1 className="text-3xl font-bold mb-2" style={{ color: '#f89939' }}>
-              {assessment.title}
-            </h1>
-            <p className="text-gray-600 mb-6">{assessment.description}</p>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="space-y-6">
+              {questions.map((q) => (
+                <div key={q.id} className="p-4 border rounded-lg bg-gray-50">
+                  <p className="font-semibold text-gray-800 mb-3">{q.text}</p>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Questions */}
-              <div className="pt-6 border-t">
-                <h2 className="text-2xl font-bold mb-6" style={{ color: '#f89939' }}>
-                  Assessment Questions
-                </h2>
+                  {q.type === 'yes-no' && (
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input type="radio" value="yes" checked={responses[q.id] === 'yes'} onChange={() => updateResponse(q.id, 'yes')} className="mr-2" disabled={submitting} />
+                        <span>Yes</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input type="radio" value="no" checked={responses[q.id] === 'no'} onChange={() => updateResponse(q.id, 'no')} className="mr-2" disabled={submitting} />
+                        <span>No</span>
+                      </label>
+                    </div>
+                  )}
 
-                {questions.map((question: Question, index: number) => (
-                  <div key={question.id} className="mb-8 p-6 bg-gray-50 rounded-lg">
-                    <p className="font-semibold text-gray-800 mb-4">
-                      {index + 1}. {question.text}
-                    </p>
+                  {q.type === 'text' && (
+                    <textarea value={responses[q.id] || ''} onChange={(e) => updateResponse(q.id, e.target.value)} className="w-full px-4 py-2 border rounded-lg text-black" placeholder="Enter your response" rows={3} disabled={submitting} />
+                  )}
 
-                    {/* Yes/No */}
-                    {question.type === 'yes-no' && (
-                      <div className="flex gap-6">
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="radio"
-                            name={question.id}
-                            value="yes"
-                            checked={answers[question.id] === 'yes'}
-                            onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                            className="mr-2"
-                            disabled={submitting}
-                          />
-                          <span className="text-gray-700">Yes</span>
-                        </label>
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="radio"
-                            name={question.id}
-                            value="no"
-                            checked={answers[question.id] === 'no'}
-                            onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                            className="mr-2"
-                            disabled={submitting}
-                          />
-                          <span className="text-gray-700">No</span>
-                        </label>
-                      </div>
-                    )}
-
-                    {/* Text */}
-                    {question.type === 'text' && (
-                      <textarea
-                        value={(answers[question.id] as string) || ''}
-                        onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:border-orange-500"
-                        placeholder="Enter your answer..."
-                        rows={3}
-                        disabled={submitting}
-                      />
-                    )}
-
-                    {/* Rating */}
-                    {question.type === 'rating' && (
-                      <div className="flex gap-4">
-                        {[1, 2, 3, 4, 5].map(rating => (
-                          <label key={rating} className="flex items-center cursor-pointer">
-                            <input
-                              type="radio"
-                              name={question.id}
-                              value={rating}
-                              checked={answers[question.id] === rating}
-                              onChange={(e) => handleAnswerChange(question.id, parseInt(e.target.value))}
-                              className="mr-2"
-                              disabled={submitting}
-                            />
-                            <span className="text-gray-700 font-semibold text-lg">{rating}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Digital Signature */}
-              <div className="pt-6 border-t">
-                <h2 className="text-xl font-bold mb-4" style={{ color: '#f89939' }}>
-                  Digital Signature
-                </h2>
-                <p className="text-gray-600 mb-4">
-                  Please sign below to confirm you have read and understood this assessment:
-                </p>
-
-                <div className="mb-4 p-2 border-2 border-gray-300 rounded-lg bg-white">
-                  <canvas
-                    ref={canvasRef}
-                    className="w-full border border-gray-300 rounded cursor-crosshair bg-white block"
-                    onMouseDown={startDrawing}
-                    onMouseMove={draw}
-                    onMouseUp={stopDrawing}
-                    onMouseLeave={stopDrawing}
-                  />
-                </div>
-
-                <div className="flex gap-3 mb-4">
-                  <button
-                    type="button"
-                    onClick={clearSignature}
-                    className="px-6 py-2 bg-gray-300 text-gray-800 rounded-lg font-semibold hover:bg-gray-400 transition"
-                    disabled={submitting}
-                  >
-                    Clear Signature
-                  </button>
-                  {signatureData && (
-                    <div className="flex items-center text-green-600 font-semibold">
-                      ✓ Signature captured
+                  {q.type === 'rating' && (
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((num) => (
+                        <button key={num} type="button" onClick={() => updateResponse(q.id, num)} disabled={submitting} className={`px-4 py-2 rounded-lg font-semibold ${responses[q.id] === num ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}>
+                          {num}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
-              </div>
-
-              {/* Acknowledgment */}
-              <div className="pt-6 border-t">
-                <label className="flex items-start p-4 bg-blue-50 border border-blue-200 rounded-lg cursor-pointer hover:bg-blue-100 transition">
-                  <input
-                    type="checkbox"
-                    checked={acknowledged}
-                    onChange={(e) => setAcknowledged(e.target.checked)}
-                    className="mr-3 mt-1"
-                    disabled={submitting}
-                  />
-                  <span className="text-gray-700">
-                    I acknowledge that I have read and understood this assessment. I certify that my answers are true and accurate to the best of my knowledge.
-                  </span>
-                </label>
-              </div>
-
-              {/* Submit */}
-              <div className="flex gap-4 pt-6">
-                <button
-                  type="submit"
-                  disabled={submitting || !acknowledged || !signatureData}
-                  style={{ backgroundColor: '#f89939' }}
-                  className="flex-1 text-white py-3 rounded-lg font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting ? 'Submitting & Sending Notifications...' : 'Submit & Sign Assessment'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push('/dashboard/employee/my-assessments')}
-                  className="px-6 py-3 bg-gray-300 text-gray-800 rounded-lg font-semibold hover:bg-gray-400 transition"
-                  disabled={submitting}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-
-            {/* Info Box */}
-            <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-900">
-                <strong>Note:</strong> Once you submit and sign this assessment, notification emails will be sent to management confirming your completion.
-              </p>
+              ))}
             </div>
-          </div>
+
+            <div className="border-t pt-6">
+              <h3 className="font-bold text-lg mb-4" style={{ color: '#f89939' }}>Digital Signature</h3>
+              <canvas ref={canvasRef} width={600} height={180} onMouseDown={startSignature} className="border-2 border-gray-300 rounded-lg cursor-crosshair w-full" />
+              <div className="flex gap-3 mt-4">
+                <button type="button" onClick={captureSignature} disabled={submitting} className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold">Capture Signature</button>
+                <button type="button" onClick={clearSignature} disabled={submitting} className="px-4 py-2 bg-gray-400 text-white rounded-lg font-semibold">Clear</button>
+              </div>
+            </div>
+
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <label className="flex items-start cursor-pointer">
+                <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="mr-3 mt-1 w-4 h-4" disabled={submitting} />
+                <span className="text-blue-900">I acknowledge that I have reviewed and understood this assessment and agree to comply with all requirements.</span>
+              </label>
+            </div>
+
+            <button type="submit" disabled={submitting || !signature || !acknowledged} style={{ backgroundColor: '#f89939' }} className="w-full text-white py-2 rounded-lg font-semibold hover:opacity-90 transition disabled:opacity-50">
+              {submitting ? 'Submitting...' : 'Complete & Sign Assessment'}
+            </button>
+          </form>
         </div>
       </div>
-    </>
+    </div>
   );
 }
