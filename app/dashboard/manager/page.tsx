@@ -44,51 +44,28 @@ export default function ManagerDashboard() {
             <Image src="/ldr.logo.png" alt="LDR Logo" width={50} height={50} />
             <h1 className="text-2xl font-bold">LDR HR Portal</h1>
           </div>
-          <button
-            onClick={handleLogout}
-            style={{ backgroundColor: '#f89939' }}
-            className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90"
-          >
-            Logout
-          </button>
+          <button onClick={handleLogout} style={{ backgroundColor: '#f89939' }} className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90">Logout</button>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-4 gap-6">
         <aside className="col-span-1">
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="font-bold text-lg mb-6" style={{ color: '#f89939' }}>
-              Welcome, {user.name.split(',')[1]?.trim() || user.name}
-            </h2>
-
+            <h2 className="font-bold text-lg mb-6" style={{ color: '#f89939' }}>Welcome, {user.name.split(',')[1]?.trim() || user.name}</h2>
             <nav className="space-y-2">
-              <a href="/dashboard/manager/all-reports" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">
-                📋 All Reports
-              </a>
-              <a href="/dashboard/manager/create-risk-assessment" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">
-                ➕ Create Risk Assessment
-              </a>
-              <a href="/dashboard/manager/create-chemical-assessment" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">
-                ➕ Create Chemical Assessment
-              </a>
-              <a href="/dashboard/manager/assign-assessments" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">
-                ✓ Assign Assessments
-              </a>
-              <a href="/dashboard/manager/documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">
-                📄 HR Documents
-              </a>
+              <a href="/dashboard/manager/all-reports" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">📋 All Reports</a>
+              <a href="/dashboard/manager/create-risk-assessment" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">➕ Create Risk Assessment</a>
+              <a href="/dashboard/manager/create-chemical-assessment" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">➕ Create Chemical Assessment</a>
+              <a href="/dashboard/manager/assign-assessments" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">✓ Assign Assessments</a>
+              <a href="/dashboard/manager/documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded">📄 HR Documents</a>
             </nav>
           </div>
         </aside>
 
         <main className="col-span-3 space-y-6">
           <div className="bg-white rounded-lg shadow p-8">
-            <h1 className="text-4xl font-bold mb-2" style={{ color: '#f89939' }}>
-              Welcome back!
-            </h1>
-            <p className="text-gray-600">
-              Manage your team's assessments, view reports, and maintain compliance.
-            </p>
+            <h1 className="text-4xl font-bold mb-2" style={{ color: '#f89939' }}>Welcome back!</h1>
+            <p className="text-gray-600">Manage your team's assessments, view reports, and maintain compliance.</p>
           </div>
 
           <div className="grid grid-cols-3 gap-6">
@@ -107,24 +84,10 @@ export default function ManagerDashboard() {
           </div>
 
           <div className="bg-white rounded-lg shadow p-8">
-            <h2 className="text-2xl font-bold mb-6" style={{ color: '#f89939' }}>
-              Quick Actions
-            </h2>
+            <h2 className="text-2xl font-bold mb-6" style={{ color: '#f89939' }}>Quick Actions</h2>
             <div className="grid grid-cols-2 gap-4">
-              
-                href="/dashboard/manager/create-risk-assessment"
-                style={{ backgroundColor: '#f89939' }}
-                className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 text-center"
-              >
-                ➕ New Risk Assessment
-              </a>
-              
-                href="/dashboard/manager/assign-assessments"
-                style={{ backgroundColor: '#f89939' }}
-                className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 text-center"
-              >
-                ✓ Assign Assessments
-              </a>
+              <a href="/dashboard/manager/create-risk-assessment" style={{ backgroundColor: '#f89939' }} className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 text-center">➕ New Risk Assessment</a>
+              <a href="/dashboard/manager/assign-assessments" style={{ backgroundColor: '#f89939' }} className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 text-center">✓ Assign Assessments</a>
             </div>
           </div>
         </main>
