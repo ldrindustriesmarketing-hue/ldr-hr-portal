@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { logAudit } from '@/lib/audit';
 
 interface NearMiss {
   id: string;
-  submitted_by: string;
   what_could_have_happened: string;
   contributing_factors: string;
   location: string;
@@ -28,6 +28,7 @@ export default function AllNearMissPage() {
       router.push('/login');
       return;
     }
+
     fetchNearMisses();
   }, [router]);
 
@@ -49,6 +50,18 @@ export default function AllNearMissPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function expandNearMiss(reportId: string) {
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    await logAudit(
+      'report_viewed',
+      userData.id,
+      reportId,
+      'near_miss_report',
+      { action: 'manager_viewed', timestamp: new Date().toISOString() }
+    );
+    setExpandedId(expandedId === reportId ? null : reportId);
   }
 
   async function updateStatus(id: string, newStatus: string) {
@@ -99,7 +112,7 @@ export default function AllNearMissPage() {
                         {report.status.toUpperCase()}
                       </span>
                     </div>
-                    <button onClick={() => setExpandedId(expandedId === report.id ? null : report.id)} className="text-gray-600 hover:text-gray-800 font-semibold">
+                    <button onClick={() => expandNearMiss(report.id)} className="text-gray-600 hover:text-gray-800 font-semibold">
                       {expandedId === report.id ? '▼' : '▶'}
                     </button>
                   </div>

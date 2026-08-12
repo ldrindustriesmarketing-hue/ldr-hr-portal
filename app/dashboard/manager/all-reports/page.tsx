@@ -1,32 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { logAudit } from '@/lib/audit';
 
-interface HazardReport {
+interface Report {
   id: string;
   hazard_name: string;
-  hazard_site: string;
   location: string;
   description: string;
-  image_data: string | null;
+  severity: string;
   status: string;
-  manager_notes: string | null;
-  manager_updated_at: string | null;
+  image_data: string;
+  manager_notes: string;
   created_at: string;
-  submitted_by: string;
-  employee_name?: string;
 }
 
 export default function AllReportsPage() {
-  const [user, setUser] = useState<any>(null);
-  const [reports, setReports] = useState<HazardReport[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
-  const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [noteText, setNoteText] = useState<{ [key: string]: string }>({});
   const router = useRouter();
 
   useEffect(() => {
@@ -35,44 +30,23 @@ export default function AllReportsPage() {
       router.push('/login');
       return;
     }
-    const parsedUser = JSON.parse(userData);
-    if (parsedUser.role !== 'manager' && parsedUser.role !== 'admin') {
-      router.push('/dashboard/employee');
-      return;
-    }
-    setUser(parsedUser);
-    fetchAllReports();
+
+    fetchReports();
   }, [router]);
 
-  async function fetchAllReports() {
+  async function fetchReports() {
     try {
-      const { data, error } = await supabase
-        .from('hazard_reports')
-        .select('*')
-        .order('created_at', { ascending: false });
+      setLoading(true);
+      let query = supabase.from('hazard_reports').select('*').order('created_at', { ascending: false });
+
+      if (filterStatus !== 'all') {
+        query = query.eq('status', filterStatus);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
-
-      const reportsWithNames = await Promise.all(
-        (data || []).map(async (report) => {
-          const { data: empData } = await supabase
-            .from('employees')
-            .select('name')
-            .eq('id', report.submitted_by)
-            .single();
-          return {
-            ...report,
-            employee_name: empData?.name || 'Unknown'
-          };
-        })
-      );
-
-      setReports(reportsWithNames);
-      const notesMap: { [key: string]: string } = {};
-      reportsWithNames.forEach((report) => {
-        notesMap[report.id] = report.manager_notes || '';
-      });
-      setNoteText(notesMap);
+      setReports(data || []);
     } catch (err) {
       console.error('Error fetching reports:', err);
     } finally {
@@ -80,242 +54,106 @@ export default function AllReportsPage() {
     }
   }
 
-  async function updateStatusAndNotes(reportId: string, newStatus: string) {
-    setUpdatingId(reportId);
+  async function expandReport(reportId: string) {
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    await logAudit(
+      'report_viewed',
+      userData.id,
+      reportId,
+      'hazard_report',
+      { action: 'manager_viewed', timestamp: new Date().toISOString() }
+    );
+    setExpandedId(expandedId === reportId ? null : reportId);
+  }
+
+  async function updateStatus(id: string, newStatus: string) {
     try {
-      const now = new Date().toISOString();
-      
-      const { error } = await supabase
-        .from('hazard_reports')
-        .update({ 
-          status: newStatus,
-          manager_notes: noteText[reportId] || null,
-          manager_updated_at: now
-        })
-        .eq('id', reportId);
+      const { error } = await supabase.from('hazard_reports').update({ status: newStatus }).eq('id', id);
 
       if (error) throw error;
-
-      setReports(
-        reports.map((report) =>
-          report.id === reportId 
-            ? { 
-                ...report, 
-                status: newStatus,
-                manager_notes: noteText[reportId] || null,
-                manager_updated_at: now
-              } 
-            : report
-        )
-      );
+      await fetchReports();
     } catch (err) {
-      alert('Failed to update report');
-      console.error(err);
-    } finally {
-      setUpdatingId(null);
+      console.error('Error updating status:', err);
     }
   }
-
-  function getStatusColor(status: string) {
-    switch (status) {
-      case 'submitted':
-        return 'bg-blue-100 text-blue-800';
-      case 'under_review':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'resolved':
-        return 'bg-green-100 text-green-800';
-      case 'closed':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  }
-
-  function formatDate(dateString: string) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-AU', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  const filteredReports =
-    filterStatus === 'all'
-      ? reports
-      : reports.filter((report) => report.status === filterStatus);
-
-  if (loading) return <div className="p-8 text-center">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
-        <button
-          onClick={() => router.push('/dashboard/manager')}
-          className="mb-6 text-gray-600 hover:text-gray-800 flex items-center"
-        >
-          ← Back to Dashboard
-        </button>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold" style={{ color: '#f89939' }}>Hazard Reports</h1>
+          <button onClick={() => router.back()} className="text-gray-600 hover:text-gray-800 font-semibold">← Back</button>
+        </div>
 
-        <h1 className="text-3xl font-bold mb-2" style={{ color: '#f89939' }}>All Hazard Reports</h1>
-        <p className="text-gray-600 mb-6">Manage all employee hazard reports</p>
-
-        <div className="bg-white p-4 rounded-lg shadow mb-6">
-          <label className="text-gray-700 font-semibold mr-4">Filter by Status:</label>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-black focus:outline-none focus:border-orange-500"
-          >
-            <option value="all">All Reports</option>
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <label className="block text-gray-700 font-semibold mb-2">Filter by Status</label>
+          <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); fetchReports(); }} className="px-4 py-2 border rounded-lg text-black">
+            <option value="all">All Status</option>
             <option value="submitted">Submitted</option>
             <option value="under_review">Under Review</option>
             <option value="resolved">Resolved</option>
             <option value="closed">Closed</option>
           </select>
-          <span className="ml-4 text-gray-600">
-            Showing {filteredReports.length} of {reports.length} reports
-          </span>
         </div>
 
-        {filteredReports.length === 0 ? (
-          <div className="bg-white p-8 rounded-lg shadow text-center">
-            <p className="text-gray-600">No reports found.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredReports.map((report) => (
-              <div key={report.id} className="bg-white rounded-lg shadow">
-                <div
-                  className="p-6 cursor-pointer hover:bg-gray-50"
-                  onClick={() => 
-                    setExpandedReportId(
-                      expandedReportId === report.id ? null : report.id
-                    )
-                  }
-                >
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          {loading ? (
+            <p className="text-gray-600">Loading reports...</p>
+          ) : reports.length === 0 ? (
+            <p className="text-gray-600">No reports found</p>
+          ) : (
+            <div className="space-y-4">
+              {reports.map((report) => (
+                <div key={report.id} className="p-4 border rounded-lg hover:bg-gray-50">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h2 className="text-xl font-semibold text-gray-800">
-                        {report.hazard_name}
-                      </h2>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Reported by: <span className="font-semibold">{report.employee_name}</span>
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {formatDate(report.created_at)}
-                      </p>
-                    </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(
-                        report.status
-                      )}`}
-                    >
-                      {report.status.replace('_', ' ')}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div>
-                      <p className="text-xs text-gray-500 font-semibold uppercase">Site</p>
-                      <p className="text-gray-700">{report.hazard_site}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-semibold uppercase">Location</p>
-                      <p className="text-gray-700">{report.location}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {expandedReportId === report.id && (
-                  <div className="border-t p-6 bg-gray-50">
-                    <div className="mb-4">
-                      <p className="text-xs text-gray-500 font-semibold uppercase mb-2">
-                        Description
-                      </p>
-                      <p className="text-gray-700">{report.description}</p>
-                    </div>
-
-                    {report.image_data && (
-                      <div className="mb-4">
-                        <p className="text-xs text-gray-500 font-semibold uppercase mb-2">
-                          Photo
-                        </p>
-                        <img
-                          src={report.image_data}
-                          alt="Hazard photo"
-                          className="max-w-sm h-auto rounded-lg border border-gray-300"
-                        />
+                      <p className="font-semibold text-lg">{report.hazard_name}</p>
+                      <p className="text-sm text-gray-600">Location: {report.location}</p>
+                      <p className="text-sm text-gray-600">Submitted: {new Date(report.created_at).toLocaleDateString()}</p>
+                      <div className="flex gap-2 mt-2">
+                        <span className={`text-xs font-bold px-2 py-1 rounded ${report.severity === 'high' ? 'bg-red-100 text-red-800' : report.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                          {report.severity.toUpperCase()}
+                        </span>
+                        <span className={`text-xs font-bold px-2 py-1 rounded ${report.status === 'submitted' ? 'bg-blue-100 text-blue-800' : report.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' : report.status === 'resolved' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                          {report.status.toUpperCase()}
+                        </span>
                       </div>
-                    )}
-
-                    <div className="mb-4 pt-4 border-t">
-                      <label className="text-gray-700 font-semibold block mb-2">
-                        Update Status:
-                      </label>
-                      <select
-                        value={report.status}
-                        onChange={(e) => updateStatusAndNotes(report.id, e.target.value)}
-                        disabled={updatingId === report.id}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-black focus:outline-none focus:border-orange-500"
-                      >
-                        <option value="submitted">Submitted</option>
-                        <option value="under_review">Under Review</option>
-                        <option value="resolved">Resolved</option>
-                        <option value="closed">Closed</option>
-                      </select>
                     </div>
-
-                    <div className="mb-4">
-                      <label className="text-gray-700 font-semibold block mb-2">
-                        Manager Notes:
-                      </label>
-                      <textarea
-                        value={noteText[report.id] || ''}
-                        onChange={(e) => 
-                          setNoteText({
-                            ...noteText,
-                            [report.id]: e.target.value
-                          })
-                        }
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:border-orange-500"
-                        placeholder="Add notes about actions taken, follow-up required, etc..."
-                        rows={4}
-                        disabled={updatingId === report.id}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        {noteText[report.id]?.length || 0} characters
-                      </p>
-                    </div>
-
-                    {report.manager_updated_at && (
-                      <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                        <p className="text-xs text-blue-600">
-                          <span className="font-semibold">Last Updated:</span> {formatDate(report.manager_updated_at)}
-                        </p>
-                      </div>
-                    )}
-
-                    <button
-                      onClick={() => updateStatusAndNotes(report.id, report.status)}
-                      disabled={updatingId === report.id}
-                      style={{ backgroundColor: '#f89939' }}
-                      className="text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90 disabled:opacity-50"
-                    >
-                      {updatingId === report.id ? 'Saving...' : 'Save Changes'}
+                    <button onClick={() => expandReport(report.id)} className="text-gray-600 hover:text-gray-800 font-semibold">
+                      {expandedId === report.id ? '▼' : '▶'}
                     </button>
-
-                    <div className="text-xs text-gray-500 mt-4 pt-4 border-t">
-                      Report ID: {report.id.substring(0, 8)}
-                    </div>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+
+                  {expandedId === report.id && (
+                    <div className="mt-4 pt-4 border-t space-y-3">
+                      <div>
+                        <p className="font-semibold text-gray-700">Description</p>
+                        <p className="text-gray-600">{report.description}</p>
+                      </div>
+
+                      {report.image_data && (
+                        <div>
+                          <p className="font-semibold text-gray-700 mb-2">Photo</p>
+                          <img src={report.image_data} alt="Report photo" className="max-w-sm rounded-lg" />
+                        </div>
+                      )}
+
+                      <div className="mt-4 pt-4 border-t">
+                        <label className="block text-gray-700 font-semibold mb-2">Update Status</label>
+                        <select value={report.status} onChange={(e) => updateStatus(report.id, e.target.value)} className="px-4 py-2 border rounded-lg text-black">
+                          <option value="submitted">Submitted</option>
+                          <option value="under_review">Under Review</option>
+                          <option value="resolved">Resolved</option>
+                          <option value="closed">Closed</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

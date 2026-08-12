@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { logAudit } from '@/lib/audit';
 
 interface Incident {
   id: string;
-  submitted_by: string;
   incident_date: string;
   location: string;
   what_happened: string;
@@ -34,6 +34,7 @@ export default function AllIncidentsPage() {
       router.push('/login');
       return;
     }
+
     fetchIncidents();
   }, [router]);
 
@@ -55,6 +56,18 @@ export default function AllIncidentsPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function expandIncident(incidentId: string) {
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    await logAudit(
+      'report_viewed',
+      userData.id,
+      incidentId,
+      'incident_report',
+      { action: 'manager_viewed', timestamp: new Date().toISOString() }
+    );
+    setExpandedId(expandedId === incidentId ? null : incidentId);
   }
 
   async function updateStatus(id: string, newStatus: string) {
@@ -105,7 +118,7 @@ export default function AllIncidentsPage() {
                         {incident.status.toUpperCase()}
                       </span>
                     </div>
-                    <button onClick={() => setExpandedId(expandedId === incident.id ? null : incident.id)} className="text-gray-600 hover:text-gray-800 font-semibold">
+                    <button onClick={() => expandIncident(incident.id)} className="text-gray-600 hover:text-gray-800 font-semibold">
                       {expandedId === incident.id ? '▼' : '▶'}
                     </button>
                   </div>
