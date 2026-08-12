@@ -22,6 +22,7 @@ export default function AllReportsPage() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [error, setError] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -32,48 +33,68 @@ export default function AllReportsPage() {
     }
 
     fetchReports();
-  }, [router]);
+  }, [router, filterStatus]);
 
   async function fetchReports() {
     try {
       setLoading(true);
-      let query = supabase.from('hazard_reports').select('*').order('created_at', { ascending: false });
+      setError('');
+
+      let query = supabase
+        .from('hazard_reports')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (filterStatus !== 'all') {
         query = query.eq('status', filterStatus);
       }
 
-      const { data, error } = await query;
+      const { data, error: queryError } = await query;
 
-      if (error) throw error;
+      if (queryError) {
+        console.error('Query error:', queryError);
+        throw queryError;
+      }
+
       setReports(data || []);
     } catch (err) {
       console.error('Error fetching reports:', err);
+      setError('Failed to load reports');
     } finally {
       setLoading(false);
     }
   }
 
   async function expandReport(reportId: string) {
-    const userData = JSON.parse(localStorage.getItem('user') || '{}');
-    await logAudit(
-      'report_viewed',
-      userData.id,
-      reportId,
-      'hazard_report',
-      { action: 'manager_viewed', timestamp: new Date().toISOString() }
-    );
+    try {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      await logAudit(
+        'report_viewed',
+        userData.id,
+        reportId,
+        'hazard_report',
+        { action: 'manager_viewed', timestamp: new Date().toISOString() }
+      );
+    } catch (err) {
+      console.error('Error logging view:', err);
+    }
+
     setExpandedId(expandedId === reportId ? null : reportId);
   }
 
   async function updateStatus(id: string, newStatus: string) {
     try {
-      const { error } = await supabase.from('hazard_reports').update({ status: newStatus }).eq('id', id);
+      const { error: updateError } = await supabase
+        .from('hazard_reports')
+        .update({ status: newStatus })
+        .eq('id', id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
       await fetchReports();
     } catch (err) {
       console.error('Error updating status:', err);
+      setError('Failed to update status');
     }
   }
 
@@ -87,7 +108,7 @@ export default function AllReportsPage() {
 
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
           <label className="block text-gray-700 font-semibold mb-2">Filter by Status</label>
-          <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); fetchReports(); }} className="px-4 py-2 border rounded-lg text-black">
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-4 py-2 border rounded-lg text-black">
             <option value="all">All Status</option>
             <option value="submitted">Submitted</option>
             <option value="under_review">Under Review</option>
@@ -97,6 +118,12 @@ export default function AllReportsPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700">{error}</p>
+            </div>
+          )}
+
           {loading ? (
             <p className="text-gray-600">Loading reports...</p>
           ) : reports.length === 0 ? (
@@ -135,6 +162,13 @@ export default function AllReportsPage() {
                         <div>
                           <p className="font-semibold text-gray-700 mb-2">Photo</p>
                           <img src={report.image_data} alt="Report photo" className="max-w-sm rounded-lg" />
+                        </div>
+                      )}
+
+                      {report.manager_notes && (
+                        <div>
+                          <p className="font-semibold text-gray-700">Manager Notes</p>
+                          <p className="text-gray-600">{report.manager_notes}</p>
                         </div>
                       )}
 
