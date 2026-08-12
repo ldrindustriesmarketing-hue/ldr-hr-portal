@@ -14,18 +14,25 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if already logged in
+    // Only check on mount
     const userData = localStorage.getItem('user');
     if (userData) {
-      const user = JSON.parse(userData);
-      if (user.role === 'manager' || user.role === 'admin') {
-        router.push('/dashboard/manager');
-      } else {
-        router.push('/dashboard/employee');
+      try {
+        const parsedUser = JSON.parse(userData);
+        // Redirect immediately if user exists
+        if (parsedUser.role === 'manager' || parsedUser.role === 'admin') {
+          router.replace('/dashboard/manager');
+          return;
+        } else {
+          router.replace('/dashboard/employee');
+          return;
+        }
+      } catch (err) {
+        console.error('Error parsing user:', err);
+        localStorage.removeItem('user');
       }
-    } else {
-      setPageLoading(false);
     }
+    setPageLoading(false);
   }, [router]);
 
   async function handleLogin(e: React.FormEvent) {
@@ -53,7 +60,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Check password (hardcoded for now - in production use proper auth)
+      // Check password
       if (password !== 'password123') {
         setError('Invalid email or password');
         setLoading(false);
@@ -61,13 +68,15 @@ export default function LoginPage() {
       }
 
       // Store user in localStorage
-      localStorage.setItem('user', JSON.stringify({
+      const userData = {
         id: data.id,
         name: data.name,
         email: data.email,
         role: data.role,
         department: data.department
-      }));
+      };
+
+      localStorage.setItem('user', JSON.stringify(userData));
 
       // Redirect based on role
       if (data.role === 'manager' || data.role === 'admin') {
