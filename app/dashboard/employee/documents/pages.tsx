@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 
 interface Document {
   id: string;
@@ -31,12 +30,8 @@ export default function EmployeeDocumentsPage() {
   async function fetchDocuments() {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const response = await fetch('/api/documents/list');
+      const data = await response.json();
       setDocuments(data || []);
     } catch (err) {
       console.error('Error fetching documents:', err);
@@ -49,15 +44,8 @@ export default function EmployeeDocumentsPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold" style={{ color: '#f89939' }}>
-            HR Documents
-          </h1>
-          <button
-            onClick={() => router.back()}
-            className="text-gray-600 hover:text-gray-800 font-semibold"
-          >
-            ← Back
-          </button>
+          <h1 className="text-4xl font-bold" style={{ color: '#f89939' }}>HR Documents</h1>
+          <button onClick={() => router.back()} className="text-gray-600 hover:text-gray-800 font-semibold">← Back</button>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-8">
@@ -72,22 +60,10 @@ export default function EmployeeDocumentsPage() {
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg">{doc.title}</h3>
-                      {doc.description && (
-                        <p className="text-gray-600 text-sm mt-1">{doc.description}</p>
-                      )}
-                      <p className="text-xs text-gray-500 mt-2">
-                        Uploaded by: {doc.uploaded_by_name} • {new Date(doc.created_at).toLocaleDateString()}
-                      </p>
+                      {doc.description && <p className="text-gray-600 text-sm mt-1">{doc.description}</p>}
+                      <p className="text-xs text-gray-500 mt-2">Uploaded by: {doc.uploaded_by_name} • {new Date(doc.created_at).toLocaleDateString()}</p>
                     </div>
-                    
-                      href={doc.sharepoint_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ backgroundColor: '#f89939' }}
-                      className="px-4 py-2 text-white rounded-lg text-sm font-semibold hover:opacity-90"
-                    >
-                      📄 View
-                    </a>
+                    <a href={doc.sharepoint_url} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#f89939' }} className="px-4 py-2 text-white rounded-lg text-sm font-semibold hover:opacity-90">📄 View</a>
                   </div>
                 </div>
               ))}
