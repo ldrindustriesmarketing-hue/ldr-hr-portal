@@ -37,6 +37,7 @@ export default function CompleteAssessmentPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDrawingRef = useRef(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -85,27 +86,61 @@ export default function CompleteAssessmentPage() {
     setResponses((prev) => ({ ...prev, [questionId]: value }));
   }
 
-  function startSignature() {
-    if (!canvasRef.current) return;
+  function getCanvasPoint(clientX: number, clientY: number) {
     const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }
+
+  function beginStroke(clientX: number, clientY: number) {
+    const canvas = canvasRef.current;
+    const point = getCanvasPoint(clientX, clientY);
+    if (!canvas || !point) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let isDrawing = false;
+    isDrawingRef.current = true;
+    ctx.beginPath();
+    ctx.moveTo(point.x, point.y);
+  }
 
-    canvas.onmousedown = () => { isDrawing = true; };
-    canvas.onmouseup = () => { isDrawing = false; };
-    canvas.onmousemove = (e) => {
-      if (!isDrawing) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+  function continueStroke(clientX: number, clientY: number) {
+    if (!isDrawingRef.current) return;
+    const canvas = canvasRef.current;
+    const point = getCanvasPoint(clientX, clientY);
+    if (!canvas || !point) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-      ctx.lineTo(x, y);
-      ctx.lineWidth = 2.5;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-    };
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineTo(point.x, point.y);
+    ctx.stroke();
+  }
+
+  function endStroke() {
+    isDrawingRef.current = false;
+  }
+
+  function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    beginStroke(e.clientX, e.clientY);
+  }
+
+  function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    continueStroke(e.clientX, e.clientY);
+  }
+
+  function handleTouchStart(e: React.TouchEvent<HTMLCanvasElement>) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (touch) beginStroke(touch.clientX, touch.clientY);
+  }
+
+  function handleTouchMove(e: React.TouchEvent<HTMLCanvasElement>) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    if (touch) continueStroke(touch.clientX, touch.clientY);
   }
 
   function clearSignature() {
@@ -311,7 +346,19 @@ export default function CompleteAssessmentPage() {
 
             <div className="border-t pt-6">
               <h3 className="font-bold text-lg mb-4" style={{ color: '#f89939' }}>Digital Signature</h3>
-              <canvas ref={canvasRef} width={600} height={180} onMouseDown={startSignature} className="border-2 border-gray-300 rounded-lg cursor-crosshair w-full" />
+              <canvas
+                ref={canvasRef}
+                width={600}
+                height={180}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={endStroke}
+                onMouseLeave={endStroke}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={endStroke}
+                className="border-2 border-gray-300 rounded-lg cursor-crosshair w-full touch-none"
+              />
               <div className="flex gap-3 mt-4">
                 <button type="button" onClick={captureSignature} disabled={submitting} className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold">Capture Signature</button>
                 <button type="button" onClick={clearSignature} disabled={submitting} className="px-4 py-2 bg-gray-400 text-white rounded-lg font-semibold">Clear</button>
