@@ -14,11 +14,16 @@ import {
   ProbabilityLevel,
   SeverityLevel,
 } from '@/lib/riskMatrix';
+import { PPE_ITEMS } from '@/lib/ppe';
+import { compressImageFile } from '@/lib/image';
 
 export default function CreateRiskAssessmentPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [department, setDepartment] = useState('Administration');
+  const [requiredPpe, setRequiredPpe] = useState<string[]>([]);
+  const [machinePhoto, setMachinePhoto] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [rows, setRows] = useState<RiskRow[]>([]);
 
   const [hazard, setHazard] = useState('');
@@ -66,6 +71,26 @@ export default function CreateRiskAssessmentPage() {
     setRows(rows.filter((r) => r.id !== id));
   }
 
+  function togglePpe(id: string) {
+    setRequiredPpe((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+  }
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setPhotoUploading(true);
+      const dataUrl = await compressImageFile(file);
+      setMachinePhoto(dataUrl);
+    } catch (err) {
+      console.error('Error processing photo:', err);
+      setError('Failed to process photo');
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -88,6 +113,8 @@ export default function CreateRiskAssessmentPage() {
           department,
           created_by: userData.id,
           content: rows,
+          required_ppe: requiredPpe,
+          machine_photo: machinePhoto || null,
           status: 'active',
         })
         .select();
@@ -143,6 +170,39 @@ export default function CreateRiskAssessmentPage() {
                 <option value="Administration">Administration</option>
                 <option value="Manufacturing">Manufacturing</option>
               </select>
+            </div>
+
+            <div className="border-t pt-6">
+              <h3 className="text-xl font-bold mb-4" style={{ color: '#f89939' }}>Required Safety Equipment</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {PPE_ITEMS.map((item) => {
+                  const selected = requiredPpe.includes(item.id);
+                  return (
+                    <label
+                      key={item.id}
+                      className={`flex items-center gap-2 px-4 py-3 border rounded-lg cursor-pointer transition ${selected ? 'border-orange-400 bg-orange-50' : 'border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      <input type="checkbox" checked={selected} onChange={() => togglePpe(item.id)} className="w-4 h-4" disabled={loading} />
+                      <span className="text-xl">{item.icon}</span>
+                      <span className="text-sm font-semibold text-gray-800">{item.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="border-t pt-6">
+              <h3 className="text-xl font-bold mb-4" style={{ color: '#f89939' }}>Machine Photo</h3>
+              <p className="text-sm text-gray-600 mb-3">Upload a photo of the actual machine or work area this assessment covers.</p>
+              <input type="file" accept="image/*" onChange={handlePhotoChange} className="w-full px-4 py-2 border rounded-lg" disabled={loading || photoUploading} />
+              {photoUploading && <p className="text-sm text-gray-500 mt-2">Processing photo...</p>}
+              {machinePhoto && (
+                <div className="mt-4 relative inline-block">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={machinePhoto} alt="Machine preview" className="rounded-lg border max-h-64" />
+                  <button type="button" onClick={() => setMachinePhoto('')} className="absolute top-2 right-2 bg-white/90 text-red-600 rounded-full w-7 h-7 font-bold hover:bg-white" disabled={loading}>✕</button>
+                </div>
+              )}
             </div>
 
             <div className="border-t pt-6">

@@ -5,6 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
 import { RiskRow, isRiskRow, getProbabilityInfo, getSeverityInfo, getRiskRating } from '@/lib/riskMatrix';
+import { getPpeItem } from '@/lib/ppe';
 
 interface AssessmentDetail {
   id: string;
@@ -13,6 +14,8 @@ interface AssessmentDetail {
   department: string;
   status: string;
   content: any[];
+  required_ppe?: string[];
+  machine_photo?: string;
 }
 
 export default function ViewAssessmentPage() {
@@ -94,6 +97,32 @@ export default function ViewAssessmentPage() {
 
           {assessment.description && (
             <p className="text-gray-700 mb-6">{assessment.description}</p>
+          )}
+
+          {assessment.machine_photo && (
+            <div className="mb-6 pb-6 border-b">
+              <h3 className="font-bold text-lg mb-3" style={{ color: '#f89939' }}>Machine / Work Area</h3>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={assessment.machine_photo} alt="Machine" className="rounded-lg border max-h-80" />
+            </div>
+          )}
+
+          {!!assessment.required_ppe?.length && (
+            <div className="mb-6 pb-6 border-b">
+              <h3 className="font-bold text-lg mb-3" style={{ color: '#f89939' }}>Required Safety Equipment</h3>
+              <div className="flex flex-wrap gap-3">
+                {assessment.required_ppe.map((id) => {
+                  const item = getPpeItem(id);
+                  if (!item) return null;
+                  return (
+                    <span key={id} className="flex items-center gap-2 px-4 py-2 bg-orange-50 border border-orange-200 rounded-lg">
+                      <span className="text-xl">{item.icon}</span>
+                      <span className="text-sm font-semibold text-gray-800">{item.label}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
           {rows.length === 0 ? (

@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { logAudit } from '@/lib/audit';
 import { RiskRow, isRiskRow, getProbabilityInfo, getSeverityInfo, getRiskRating } from '@/lib/riskMatrix';
+import { getPpeItem } from '@/lib/ppe';
 
 interface Question {
   id: string;
@@ -24,6 +25,8 @@ export default function CompleteAssessmentPage() {
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [assessmentTitle, setAssessmentTitle] = useState('');
   const [assessmentDescription, setAssessmentDescription] = useState('');
+  const [requiredPpe, setRequiredPpe] = useState<string[]>([]);
+  const [machinePhoto, setMachinePhoto] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [riskRows, setRiskRows] = useState<RiskRow[]>([]);
   const [isMatrixContent, setIsMatrixContent] = useState(true);
@@ -53,12 +56,14 @@ export default function CompleteAssessmentPage() {
       setAssignment(assignData);
 
       const table = assignData.assessment_type === 'risk' ? 'risk_assessments' : 'chemical_assessments';
-      const { data: assessData, error: assessError } = await supabase.from(table).select('title, description, content').eq('id', assignData.assessment_id).single();
+      const { data: assessData, error: assessError } = await supabase.from(table).select('title, description, content, required_ppe, machine_photo').eq('id', assignData.assessment_id).single();
 
       if (assessError) throw assessError;
 
       setAssessmentTitle(assessData.title || '');
       setAssessmentDescription(assessData.description || '');
+      setRequiredPpe(assessData.required_ppe || []);
+      setMachinePhoto(assessData.machine_photo || '');
 
       const content = assessData.content || [];
       if (content.length === 0 || content.every(isRiskRow)) {
@@ -194,6 +199,32 @@ export default function CompleteAssessmentPage() {
             </div>
             <span className="text-xs font-bold px-2 py-1 rounded bg-orange-100 text-orange-800 whitespace-nowrap">{assessmentLabel}</span>
           </div>
+
+          {machinePhoto && (
+            <div className="mb-6 pb-6 border-b">
+              <h3 className="font-bold text-lg mb-3" style={{ color: '#f89939' }}>Machine / Work Area</h3>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={machinePhoto} alt="Machine" className="rounded-lg border max-h-80" />
+            </div>
+          )}
+
+          {requiredPpe.length > 0 && (
+            <div className="mb-6 pb-6 border-b">
+              <h3 className="font-bold text-lg mb-3" style={{ color: '#f89939' }}>Required Safety Equipment</h3>
+              <div className="flex flex-wrap gap-3">
+                {requiredPpe.map((id) => {
+                  const item = getPpeItem(id);
+                  if (!item) return null;
+                  return (
+                    <span key={id} className="flex items-center gap-2 px-4 py-2 bg-orange-50 border border-orange-200 rounded-lg">
+                      <span className="text-xl">{item.icon}</span>
+                      <span className="text-sm font-semibold text-gray-800">{item.label}</span>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {isRisk ? (
