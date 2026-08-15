@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { logAudit } from '@/lib/audit';
+import { RiskRow, isRiskRow, getProbabilityInfo, getSeverityInfo, getRiskRating } from '@/lib/riskMatrix';
 
 interface Question {
   id: string;
@@ -22,6 +23,8 @@ export default function CompleteAssessmentPage() {
   const assignmentId = params.id as string;
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [riskRows, setRiskRows] = useState<RiskRow[]>([]);
+  const [isMatrixContent, setIsMatrixContent] = useState(true);
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [signature, setSignature] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
@@ -51,7 +54,15 @@ export default function CompleteAssessmentPage() {
       const { data: assessData, error: assessError } = await supabase.from(table).select('content').eq('id', assignData.assessment_id).single();
 
       if (assessError) throw assessError;
-      setQuestions(assessData.content || []);
+
+      const content = assessData.content || [];
+      if (content.length === 0 || content.every(isRiskRow)) {
+        setRiskRows(content);
+        setIsMatrixContent(true);
+      } else {
+        setQuestions(content);
+        setIsMatrixContent(false);
+      }
     } catch (err) {
       console.error('Error fetching assessment:', err);
       setError('Failed to load assessment');
@@ -151,9 +162,12 @@ export default function CompleteAssessmentPage() {
   if (loading) return <div className="p-8 text-center">Loading assessment...</div>;
   if (!assignment) return <div className="p-8 text-center">Assessment not found</div>;
 
+  const isRisk = isMatrixContent;
+  const assessmentLabel = assignment.assessment_type === 'chemical' ? 'Chemical Assessment' : 'Risk Assessment';
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-2xl mx-auto">
+      <div className={isRisk ? 'max-w-5xl mx-auto' : 'max-w-2xl mx-auto'}>
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold" style={{ color: '#f89939' }}>Complete Assessment</h1>
           <button onClick={() => router.back()} className="text-gray-600 hover:text-gray-800 font-semibold">← Back</button>
@@ -167,6 +181,52 @@ export default function CompleteAssessmentPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-8">
+            {isRisk ? (
+              <div>
+                <h3 className="font-bold text-lg mb-4" style={{ color: '#f89939' }}>{assessmentLabel}</h3>
+                {riskRows.length === 0 ? (
+                  <p className="text-gray-600">No hazards listed on this assessment.</p>
+                ) : (
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-gray-800 text-white text-left">
+                          <th className="p-2">Hazard</th>
+                          <th className="p-2">Risk</th>
+                          <th className="p-2">Probability</th>
+                          <th className="p-2">Severity</th>
+                          <th className="p-2">Rating</th>
+                          <th className="p-2">Actions to Minimise Risk</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {riskRows.map((r) => {
+                          const pInfo = getProbabilityInfo(r.probability);
+                          const sInfo = getSeverityInfo(r.severity);
+                          const rating = getRiskRating(pInfo.score, sInfo.score);
+                          return (
+                            <tr key={r.id} className="border-b align-top">
+                              <td className="p-2 font-semibold text-gray-800">{r.hazard}</td>
+                              <td className="p-2 text-gray-700">{r.risk}</td>
+                              <td className="p-2">
+                                <span className="px-2 py-1 rounded font-semibold whitespace-nowrap" style={{ backgroundColor: pInfo.color, color: pInfo.textColor }}>{r.probability}</span>
+                              </td>
+                              <td className="p-2">
+                                <span className="px-2 py-1 rounded font-semibold whitespace-nowrap" style={{ backgroundColor: sInfo.color, color: sInfo.textColor }}>{r.severity}</span>
+                              </td>
+                              <td className="p-2">
+                                <span className="px-2 py-1 rounded font-semibold whitespace-nowrap" style={{ backgroundColor: rating.color, color: rating.textColor }}>{rating.label}</span>
+                              </td>
+                              <td className="p-2 text-gray-700">{r.actions}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ) : (
             <div className="space-y-6">
               {questions.map((q) => (
                 <div key={q.id} className="p-4 border rounded-lg bg-gray-50">
@@ -201,6 +261,7 @@ export default function CompleteAssessmentPage() {
                 </div>
               ))}
             </div>
+            )}
 
             <div className="border-t pt-6">
               <h3 className="font-bold text-lg mb-4" style={{ color: '#f89939' }}>Digital Signature</h3>
@@ -214,7 +275,11 @@ export default function CompleteAssessmentPage() {
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <label className="flex items-start cursor-pointer">
                 <input type="checkbox" checked={acknowledged} onChange={(e) => setAcknowledged(e.target.checked)} className="mr-3 mt-1 w-4 h-4" disabled={submitting} />
-                <span className="text-blue-900">I acknowledge that I have reviewed and understood this assessment and agree to comply with all requirements.</span>
+                <span className="text-blue-900">
+                  {isRisk
+                    ? 'I acknowledge that I have reviewed and understood the hazards, risks, and control measures listed above and agree to comply with all requirements.'
+                    : 'I acknowledge that I have reviewed and understood this assessment and agree to comply with all requirements.'}
+                </span>
               </label>
             </div>
 
