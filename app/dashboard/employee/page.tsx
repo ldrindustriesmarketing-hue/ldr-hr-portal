@@ -68,7 +68,7 @@ export default function EmployeeDashboard() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Image src="/ldr-logo-white.png" alt="LDR Logo" width={50} height={50} />
-            <h1 className="text-2xl font-bold text-white">LDR HR Portal</h1>
+            <h1 className="text-2xl font-bold text-white">HR Portal</h1>
           </div>
           <button onClick={handleLogout} style={{ backgroundColor: '#f89939' }} className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90">Logout</button>
         </div>
