@@ -111,6 +111,7 @@ export default function ManagerDashboard() {
             <div>
               <p className="text-xs text-gray-500 font-semibold uppercase mb-3">Assessments</p>
               <nav className="space-y-2">
+                <a href="/dashboard/manager/assessments" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📋 All Assessments</a>
                 <a href="/dashboard/manager/create-risk-assessment" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">➕ Create Risk Assessment</a>
                 <a href="/dashboard/manager/create-chemical-assessment" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">➕ Create Chemical Assessment</a>
                 <a href="/dashboard/manager/assign-assessments" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">✓ Assign Assessments</a>
@@ -188,6 +189,11 @@ export default function ManagerDashboard() {
               <p className="text-xl font-bold" style={{ color: '#f89939' }}>🚨</p>
               <p className="font-semibold text-gray-800 mt-2">Incident Reports</p>
               <p className="text-sm text-gray-600">Review all incident reports</p>
+            </a>
+            <a href="/dashboard/manager/assessments" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+              <p className="text-xl font-bold" style={{ color: '#f89939' }}>📋</p>
+              <p className="font-semibold text-gray-800 mt-2">All Assessments</p>
+              <p className="text-sm text-gray-600">View and print risk & chemical assessments</p>
             </a>
           </div>
 

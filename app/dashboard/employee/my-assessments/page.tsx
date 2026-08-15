@@ -49,7 +49,26 @@ export default function MyAssessmentsPage() {
         .order('due_date', { ascending: true });
 
       if (error) throw error;
-      setAssessments(data || []);
+
+      const assignments: Assignment[] = data || [];
+
+      const riskIds = assignments.filter((a) => a.assessment_type === 'risk').map((a) => a.assessment_id);
+      const chemicalIds = assignments.filter((a) => a.assessment_type === 'chemical').map((a) => a.assessment_id);
+
+      const [riskTitles, chemicalTitles] = await Promise.all([
+        riskIds.length
+          ? supabase.from('risk_assessments').select('id, title').in('id', riskIds)
+          : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+        chemicalIds.length
+          ? supabase.from('chemical_assessments').select('id, title').in('id', chemicalIds)
+          : Promise.resolve({ data: [] as { id: string; title: string }[] }),
+      ]);
+
+      const titleMap = new Map<string, string>();
+      (riskTitles.data || []).forEach((t) => titleMap.set(t.id, t.title));
+      (chemicalTitles.data || []).forEach((t) => titleMap.set(t.id, t.title));
+
+      setAssessments(assignments.map((a) => ({ ...a, assessment_title: titleMap.get(a.assessment_id) })));
     } catch (err) {
       console.error('Error fetching assessments:', err);
     } finally {
@@ -76,8 +95,9 @@ export default function MyAssessmentsPage() {
                 <div key={assignment.id} className="p-4 border rounded-lg hover:bg-gray-50">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <p className="font-semibold text-lg">{assignment.assessment_type === 'risk' ? 'Risk' : 'Chemical'} Assessment</p>
-                      <p className="text-sm text-gray-600">Due: {new Date(assignment.due_date).toLocaleDateString()}</p>
+                      <p className="font-semibold text-lg">{assignment.assessment_title || 'Untitled Assessment'}</p>
+                      <p className="text-xs text-gray-500 font-semibold uppercase mt-0.5">{assignment.assessment_type === 'risk' ? 'Risk Assessment' : 'Chemical Assessment'}</p>
+                      <p className="text-sm text-gray-600 mt-1">Due: {new Date(assignment.due_date).toLocaleDateString()}</p>
                       <span className={`text-xs font-bold px-2 py-1 rounded mt-2 inline-block ${assignment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : assignment.status === 'signed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                         {assignment.status.toUpperCase()}
                       </span>

@@ -22,6 +22,8 @@ export default function CompleteAssessmentPage() {
   const params = useParams();
   const assignmentId = params.id as string;
   const [assignment, setAssignment] = useState<Assignment | null>(null);
+  const [assessmentTitle, setAssessmentTitle] = useState('');
+  const [assessmentDescription, setAssessmentDescription] = useState('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [riskRows, setRiskRows] = useState<RiskRow[]>([]);
   const [isMatrixContent, setIsMatrixContent] = useState(true);
@@ -51,9 +53,12 @@ export default function CompleteAssessmentPage() {
       setAssignment(assignData);
 
       const table = assignData.assessment_type === 'risk' ? 'risk_assessments' : 'chemical_assessments';
-      const { data: assessData, error: assessError } = await supabase.from(table).select('content').eq('id', assignData.assessment_id).single();
+      const { data: assessData, error: assessError } = await supabase.from(table).select('title, description, content').eq('id', assignData.assessment_id).single();
 
       if (assessError) throw assessError;
+
+      setAssessmentTitle(assessData.title || '');
+      setAssessmentDescription(assessData.description || '');
 
       const content = assessData.content || [];
       if (content.length === 0 || content.every(isRiskRow)) {
@@ -169,7 +174,10 @@ export default function CompleteAssessmentPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className={isRisk ? 'max-w-5xl mx-auto' : 'max-w-2xl mx-auto'}>
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold" style={{ color: '#f89939' }}>Complete Assessment</h1>
+          <div>
+            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Complete Assessment</p>
+            <h1 className="text-4xl font-bold" style={{ color: '#f89939' }}>{assessmentTitle || assessmentLabel}</h1>
+          </div>
           <button onClick={() => router.back()} className="text-gray-600 hover:text-gray-800 font-semibold">← Back</button>
         </div>
 
@@ -180,10 +188,17 @@ export default function CompleteAssessmentPage() {
             </div>
           )}
 
+          <div className="mb-6 pb-6 border-b flex items-start justify-between gap-4">
+            <div>
+              {assessmentDescription && <p className="text-gray-600">{assessmentDescription}</p>}
+            </div>
+            <span className="text-xs font-bold px-2 py-1 rounded bg-orange-100 text-orange-800 whitespace-nowrap">{assessmentLabel}</span>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-8">
             {isRisk ? (
               <div>
-                <h3 className="font-bold text-lg mb-4" style={{ color: '#f89939' }}>{assessmentLabel}</h3>
+                <h3 className="font-bold text-lg mb-4" style={{ color: '#f89939' }}>Hazards</h3>
                 {riskRows.length === 0 ? (
                   <p className="text-gray-600">No hazards listed on this assessment.</p>
                 ) : (
