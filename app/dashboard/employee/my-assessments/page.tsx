@@ -119,7 +119,12 @@ export default function MyAssessmentsPage() {
                       )}
 
                       {assignment.status === 'signed' && (
-                        <p className="text-green-600 font-semibold">✓ Assessment completed and signed</p>
+                        <div className="space-y-2">
+                          <p className="text-green-600 font-semibold">✓ Assessment completed and signed</p>
+                          <a href={`/dashboard/employee/view-assessment/${assignment.id}`} style={{ backgroundColor: '#f89939' }} className="block px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90 text-center">
+                            📄 View Signed Copy
+                          </a>
+                        </div>
                       )}
                     </div>
                   )}
