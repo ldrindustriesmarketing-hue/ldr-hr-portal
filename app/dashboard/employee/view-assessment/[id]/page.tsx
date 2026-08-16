@@ -26,6 +26,7 @@ interface AssessmentResponse {
   signature_data: string;
   checkbox_acknowledged: boolean;
   signed_date: string;
+  signed_version?: number | null;
 }
 
 export default function ViewSignedAssessmentPage() {
@@ -38,6 +39,8 @@ export default function ViewSignedAssessmentPage() {
   const [assessmentDescription, setAssessmentDescription] = useState('');
   const [requiredPpe, setRequiredPpe] = useState<string[]>([]);
   const [machinePhoto, setMachinePhoto] = useState('');
+  const [signedVersion, setSignedVersion] = useState<number | null>(null);
+  const [currentVersion, setCurrentVersion] = useState<number | null>(null);
   const [riskRows, setRiskRows] = useState<RiskRow[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isMatrixContent, setIsMatrixContent] = useState(true);
@@ -69,22 +72,6 @@ export default function ViewSignedAssessmentPage() {
       setEmployeeName(user.name);
 
       const table = assignData.assessment_type === 'risk' ? 'risk_assessments' : 'chemical_assessments';
-      const { data: assessData, error: assessError } = await supabase.from(table).select('title, description, content, required_ppe, machine_photo').eq('id', assignData.assessment_id).single();
-      if (assessError) throw assessError;
-
-      setAssessmentTitle(assessData.title || '');
-      setAssessmentDescription(assessData.description || '');
-      setRequiredPpe(assessData.required_ppe || []);
-      setMachinePhoto(assessData.machine_photo || '');
-
-      const content = assessData.content || [];
-      if (content.length === 0 || content.every(isRiskRow)) {
-        setRiskRows(content);
-        setIsMatrixContent(true);
-      } else {
-        setQuestions(content);
-        setIsMatrixContent(false);
-      }
 
       const { data: responseData, error: responseError } = await supabase
         .from('assessment_responses')
@@ -100,6 +87,48 @@ export default function ViewSignedAssessmentPage() {
         return;
       }
       setResponse(responseData);
+      setSignedVersion(responseData.signed_version ?? null);
+
+      // Pin the displayed content to the exact version the employee signed,
+      // so a later edit to the assessment doesn't rewrite what their
+      // signature applied to. Falls back to the live assessment if this
+      // signature predates versioning or its snapshot is unavailable.
+      let resolvedContent: any = null;
+
+      if (responseData.signed_version != null) {
+        const { data: versionData } = await supabase
+          .from('assessment_versions')
+          .select('title, description, content, required_ppe, machine_photo')
+          .eq('assessment_id', assignData.assessment_id)
+          .eq('assessment_type', assignData.assessment_type)
+          .eq('version', responseData.signed_version)
+          .maybeSingle();
+        resolvedContent = versionData || null;
+      }
+
+      const { data: liveData, error: liveError } = await supabase
+        .from(table)
+        .select('title, description, content, required_ppe, machine_photo, version')
+        .eq('id', assignData.assessment_id)
+        .single();
+      if (liveError) throw liveError;
+      setCurrentVersion(liveData.version || 1);
+
+      const assessData = resolvedContent || liveData;
+
+      setAssessmentTitle(assessData.title || '');
+      setAssessmentDescription(assessData.description || '');
+      setRequiredPpe(assessData.required_ppe || []);
+      setMachinePhoto(assessData.machine_photo || '');
+
+      const content = assessData.content || [];
+      if (content.length === 0 || content.every(isRiskRow)) {
+        setRiskRows(content);
+        setIsMatrixContent(true);
+      } else {
+        setQuestions(content);
+        setIsMatrixContent(false);
+      }
     } catch (err) {
       console.error('Error loading signed assessment:', err);
       setError('Failed to load signed assessment');
@@ -140,8 +169,17 @@ export default function ViewSignedAssessmentPage() {
             <div>
               {assessmentDescription && <p className="text-gray-600">{assessmentDescription}</p>}
             </div>
-            <span className="text-xs font-bold px-2 py-1 rounded bg-orange-100 text-orange-800 whitespace-nowrap">{assessmentLabel}</span>
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-xs font-bold px-2 py-1 rounded bg-orange-100 text-orange-800 whitespace-nowrap">{assessmentLabel}</span>
+              <span className="text-xs font-bold px-2 py-1 rounded bg-gray-200 text-gray-700 whitespace-nowrap">Signed at Version {signedVersion ?? '—'}</span>
+            </div>
           </div>
+
+          {currentVersion !== null && signedVersion !== null && currentVersion > signedVersion && (
+            <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800 print:hidden">
+              ⚠️ This assessment has since been updated to Version {currentVersion}. This page shows exactly what was reviewed and signed at Version {signedVersion} — it will not reflect later changes.
+            </div>
+          )}
 
           {machinePhoto && (
             <div className="mb-6 pb-6 border-b">

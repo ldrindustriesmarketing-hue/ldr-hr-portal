@@ -16,6 +16,15 @@ interface AssessmentDetail {
   content: any[];
   required_ppe?: string[];
   machine_photo?: string;
+  version?: number;
+}
+
+interface VersionEntry {
+  id: string;
+  version: number;
+  change_note: string;
+  changed_by_name: string | null;
+  created_at: string;
 }
 
 export default function ViewAssessmentPage() {
@@ -26,6 +35,7 @@ export default function ViewAssessmentPage() {
   const type = (searchParams.get('type') === 'chemical' ? 'chemical' : 'risk') as 'risk' | 'chemical';
 
   const [assessment, setAssessment] = useState<AssessmentDetail | null>(null);
+  const [versions, setVersions] = useState<VersionEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -47,6 +57,19 @@ export default function ViewAssessmentPage() {
 
       if (fetchError) throw fetchError;
       setAssessment(data);
+
+      const { data: versionData, error: versionError } = await supabase
+        .from('assessment_versions')
+        .select('id, version, change_note, changed_by_name, created_at')
+        .eq('assessment_id', id)
+        .eq('assessment_type', type)
+        .order('version', { ascending: false });
+
+      if (versionError) {
+        console.error('Error fetching version history:', versionError);
+      } else {
+        setVersions(versionData || []);
+      }
     } catch (err) {
       console.error('Error fetching assessment:', err);
       setError('Failed to load assessment');
@@ -67,17 +90,21 @@ export default function ViewAssessmentPage() {
           <h1 className="text-4xl font-bold" style={{ color: '#f89939' }}>View Assessment</h1>
           <div className="flex gap-3">
             <button onClick={() => router.back()} className="text-gray-600 hover:text-gray-800 font-semibold">← Back</button>
+            <a href={`/dashboard/manager/edit-assessment/${id}?type=${type}`} className="px-6 py-2 bg-gray-700 text-white rounded-lg font-semibold hover:opacity-90">✏️ Edit</a>
             <button onClick={() => window.print()} style={{ backgroundColor: '#f89939' }} className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90">🖨️ Print / Save as PDF</button>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-8 print:shadow-none print:p-0">
-          <div className="flex items-center gap-4 mb-6 pb-6 border-b">
-            <Image src="/ldr.logo.png" alt="LDR Logo" width={50} height={50} />
-            <div>
-              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">{type === 'risk' ? 'Risk Assessment' : 'Chemical Assessment'}</p>
-              <h2 className="text-2xl font-bold" style={{ color: '#f89939' }}>{assessment.title}</h2>
+          <div className="flex items-center justify-between gap-4 mb-6 pb-6 border-b">
+            <div className="flex items-center gap-4">
+              <Image src="/ldr.logo.png" alt="LDR Logo" width={50} height={50} />
+              <div>
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">{type === 'risk' ? 'Risk Assessment' : 'Chemical Assessment'}</p>
+                <h2 className="text-2xl font-bold" style={{ color: '#f89939' }}>{assessment.title}</h2>
+              </div>
             </div>
+            <span className="text-xs font-bold px-2 py-1 rounded bg-gray-200 text-gray-700 whitespace-nowrap">Version {assessment.version || 1}</span>
           </div>
 
           <div className="grid grid-cols-3 gap-4 mb-6 text-sm">
@@ -164,6 +191,24 @@ export default function ViewAssessmentPage() {
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {versions.length > 0 && (
+            <div className="mt-8 pt-6 border-t print:hidden">
+              <h3 className="font-bold text-lg mb-4" style={{ color: '#f89939' }}>Version History</h3>
+              <div className="space-y-3">
+                {versions.map((v) => (
+                  <div key={v.id} className="p-3 border rounded-lg bg-gray-50">
+                    <div className="flex justify-between items-start gap-4">
+                      <span className="text-xs font-bold px-2 py-1 rounded bg-gray-200 text-gray-700 whitespace-nowrap">v{v.version}</span>
+                      <p className="text-xs text-gray-500 whitespace-nowrap">{new Date(v.created_at).toLocaleString()}</p>
+                    </div>
+                    <p className="text-gray-800 text-sm mt-2">{v.change_note}</p>
+                    <p className="text-xs text-gray-500 mt-1">By {v.changed_by_name || 'Unknown'}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -27,6 +27,7 @@ export default function CompleteAssessmentPage() {
   const [assessmentDescription, setAssessmentDescription] = useState('');
   const [requiredPpe, setRequiredPpe] = useState<string[]>([]);
   const [machinePhoto, setMachinePhoto] = useState('');
+  const [assessmentVersion, setAssessmentVersion] = useState(1);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [riskRows, setRiskRows] = useState<RiskRow[]>([]);
   const [isMatrixContent, setIsMatrixContent] = useState(true);
@@ -57,7 +58,7 @@ export default function CompleteAssessmentPage() {
       setAssignment(assignData);
 
       const table = assignData.assessment_type === 'risk' ? 'risk_assessments' : 'chemical_assessments';
-      const { data: assessData, error: assessError } = await supabase.from(table).select('title, description, content, required_ppe, machine_photo').eq('id', assignData.assessment_id).single();
+      const { data: assessData, error: assessError } = await supabase.from(table).select('title, description, content, required_ppe, machine_photo, version').eq('id', assignData.assessment_id).single();
 
       if (assessError) throw assessError;
 
@@ -65,6 +66,7 @@ export default function CompleteAssessmentPage() {
       setAssessmentDescription(assessData.description || '');
       setRequiredPpe(assessData.required_ppe || []);
       setMachinePhoto(assessData.machine_photo || '');
+      setAssessmentVersion(assessData.version || 1);
 
       const content = assessData.content || [];
       if (content.length === 0 || content.every(isRiskRow)) {
@@ -179,7 +181,8 @@ export default function CompleteAssessmentPage() {
           responses: responses,
           signature_data: signature,
           checkbox_acknowledged: acknowledged,
-          signed_date: new Date().toISOString()
+          signed_date: new Date().toISOString(),
+          signed_version: assessmentVersion
         })
         .select();
 

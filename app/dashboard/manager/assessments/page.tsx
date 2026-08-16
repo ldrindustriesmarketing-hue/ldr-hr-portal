@@ -11,6 +11,7 @@ interface AssessmentRow {
   status: string;
   hazard_count: number;
   type: 'risk' | 'chemical';
+  version: number;
   created_at?: string;
 }
 
@@ -45,6 +46,7 @@ export default function AssessmentsPage() {
         status: a.status,
         hazard_count: Array.isArray(a.content) ? a.content.length : 0,
         type: 'risk',
+        version: a.version || 1,
         created_at: a.created_at,
       }));
 
@@ -55,6 +57,7 @@ export default function AssessmentsPage() {
         status: a.status,
         hazard_count: Array.isArray(a.content) ? a.content.length : 0,
         type: 'chemical',
+        version: a.version || 1,
         created_at: a.created_at,
       }));
 
@@ -114,6 +117,7 @@ export default function AssessmentsPage() {
                     <th className="p-3">Type</th>
                     <th className="p-3">Department</th>
                     <th className="p-3">Hazards</th>
+                    <th className="p-3">Version</th>
                     <th className="p-3">Status</th>
                     <th className="p-3"></th>
                   </tr>
@@ -129,19 +133,28 @@ export default function AssessmentsPage() {
                       </td>
                       <td className="p-3 text-gray-700">{r.department}</td>
                       <td className="p-3 text-gray-700">{r.hazard_count}</td>
+                      <td className="p-3 text-gray-700">v{r.version}</td>
                       <td className="p-3">
                         <span className={`text-xs font-bold px-2 py-1 rounded ${r.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                           {r.status?.toUpperCase()}
                         </span>
                       </td>
                       <td className="p-3">
-                        <a
-                          href={`/dashboard/manager/view-assessment/${r.id}?type=${r.type}`}
-                          style={{ backgroundColor: '#f89939' }}
-                          className="px-4 py-1.5 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap inline-block"
-                        >
-                          🖨️ View / Print
-                        </a>
+                        <div className="flex gap-2">
+                          <a
+                            href={`/dashboard/manager/view-assessment/${r.id}?type=${r.type}`}
+                            style={{ backgroundColor: '#f89939' }}
+                            className="px-4 py-1.5 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap inline-block"
+                          >
+                            🖨️ View / Print
+                          </a>
+                          <a
+                            href={`/dashboard/manager/edit-assessment/${r.id}?type=${r.type}`}
+                            className="px-4 py-1.5 bg-gray-700 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap inline-block"
+                          >
+                            ✏️ Edit
+                          </a>
+                        </div>
                       </td>
                     </tr>
                   ))}
