@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { logAudit } from '@/lib/audit';
 
 interface AssessmentRow {
   id: string;
@@ -19,7 +20,9 @@ export default function AssessmentsPage() {
   const [rows, setRows] = useState<AssessmentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<'all' | 'risk' | 'chemical'>('all');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [search, setSearch] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -73,10 +76,51 @@ export default function AssessmentsPage() {
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (typeFilter !== 'all' && r.type !== typeFilter) return false;
+      if (statusFilter !== 'all' && (r.status || 'active') !== statusFilter) return false;
       if (search && !r.title.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [rows, typeFilter, search]);
+  }, [rows, typeFilter, statusFilter, search]);
+
+  async function handleDelete(row: AssessmentRow) {
+    if (!confirm(`Delete "${row.title}"? It will be archived (hidden from the active list and no longer assignable), but its history is kept for anyone who has already signed it. You can restore it later.`)) return;
+
+    try {
+      setBusyId(row.id);
+      const table = row.type === 'risk' ? 'risk_assessments' : 'chemical_assessments';
+      const { error } = await supabase.from(table).update({ status: 'archived' }).eq('id', row.id);
+      if (error) throw error;
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('assessment_deleted', userData.id, row.id, row.type === 'risk' ? 'risk_assessment' : 'chemical_assessment', { title: row.title });
+
+      await fetchAssessments();
+    } catch (err) {
+      console.error('Error deleting assessment:', err);
+      alert('Failed to delete assessment');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleRestore(row: AssessmentRow) {
+    try {
+      setBusyId(row.id);
+      const table = row.type === 'risk' ? 'risk_assessments' : 'chemical_assessments';
+      const { error } = await supabase.from(table).update({ status: 'active' }).eq('id', row.id);
+      if (error) throw error;
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('assessment_restored', userData.id, row.id, row.type === 'risk' ? 'risk_assessment' : 'chemical_assessment', { title: row.title });
+
+      await fetchAssessments();
+    } catch (err) {
+      console.error('Error restoring assessment:', err);
+      alert('Failed to restore assessment');
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -99,6 +143,11 @@ export default function AssessmentsPage() {
               <option value="all">All Types</option>
               <option value="risk">Risk Assessments</option>
               <option value="chemical">Chemical Assessments</option>
+            </select>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className="px-4 py-2 border rounded-lg text-black">
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
+              <option value="all">All Statuses</option>
             </select>
             <a href="/dashboard/manager/create-risk-assessment" style={{ backgroundColor: '#f89939' }} className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90">➕ New Risk Assessment</a>
             <a href="/dashboard/manager/create-chemical-assessment" style={{ backgroundColor: '#f89939' }} className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90">➕ New Chemical Assessment</a>
@@ -154,6 +203,23 @@ export default function AssessmentsPage() {
                           >
                             ✏️ Edit
                           </a>
+                          {r.status === 'archived' ? (
+                            <button
+                              onClick={() => handleRestore(r)}
+                              disabled={busyId === r.id}
+                              className="px-4 py-1.5 bg-green-600 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap disabled:opacity-50"
+                            >
+                              ♻️ Restore
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleDelete(r)}
+                              disabled={busyId === r.id}
+                              className="px-4 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap disabled:opacity-50"
+                            >
+                              🗑️ Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

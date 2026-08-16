@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
+import { logAudit } from '@/lib/audit';
 import { RiskRow, isRiskRow, getProbabilityInfo, getSeverityInfo, getRiskRating } from '@/lib/riskMatrix';
 import { getPpeItem } from '@/lib/ppe';
 
@@ -37,6 +38,7 @@ export default function ViewAssessmentPage() {
   const [assessment, setAssessment] = useState<AssessmentDetail | null>(null);
   const [versions, setVersions] = useState<VersionEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -78,6 +80,49 @@ export default function ViewAssessmentPage() {
     }
   }
 
+  async function handleDelete() {
+    if (!assessment) return;
+    if (!confirm(`Delete "${assessment.title}"? It will be archived (hidden from the active list and no longer assignable), but its history is kept for anyone who has already signed it. You can restore it later.`)) return;
+
+    try {
+      setBusy(true);
+      const table = type === 'risk' ? 'risk_assessments' : 'chemical_assessments';
+      const { error: updateError } = await supabase.from(table).update({ status: 'archived' }).eq('id', id);
+      if (updateError) throw updateError;
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('assessment_deleted', userData.id, id, type === 'risk' ? 'risk_assessment' : 'chemical_assessment', { title: assessment.title });
+
+      router.push('/dashboard/manager/assessments');
+    } catch (err) {
+      console.error('Error deleting assessment:', err);
+      alert('Failed to delete assessment');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRestore() {
+    if (!assessment) return;
+
+    try {
+      setBusy(true);
+      const table = type === 'risk' ? 'risk_assessments' : 'chemical_assessments';
+      const { error: updateError } = await supabase.from(table).update({ status: 'active' }).eq('id', id);
+      if (updateError) throw updateError;
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('assessment_restored', userData.id, id, type === 'risk' ? 'risk_assessment' : 'chemical_assessment', { title: assessment.title });
+
+      await fetchAssessment();
+    } catch (err) {
+      console.error('Error restoring assessment:', err);
+      alert('Failed to restore assessment');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (loading) return <div className="p-8 text-center">Loading assessment...</div>;
   if (error || !assessment) return <div className="p-8 text-center text-red-600">{error || 'Assessment not found'}</div>;
 
@@ -91,9 +136,20 @@ export default function ViewAssessmentPage() {
           <div className="flex gap-3">
             <button onClick={() => router.back()} className="text-gray-600 hover:text-gray-800 font-semibold">← Back</button>
             <a href={`/dashboard/manager/edit-assessment/${id}?type=${type}`} className="px-6 py-2 bg-gray-700 text-white rounded-lg font-semibold hover:opacity-90">✏️ Edit</a>
+            {assessment.status === 'archived' ? (
+              <button onClick={handleRestore} disabled={busy} className="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:opacity-90 disabled:opacity-50">♻️ Restore</button>
+            ) : (
+              <button onClick={handleDelete} disabled={busy} className="px-6 py-2 bg-red-600 text-white rounded-lg font-semibold hover:opacity-90 disabled:opacity-50">🗑️ Delete</button>
+            )}
             <button onClick={() => window.print()} style={{ backgroundColor: '#f89939' }} className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90">🖨️ Print / Save as PDF</button>
           </div>
         </div>
+
+        {assessment.status === 'archived' && (
+          <div className="mb-6 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800 print:hidden">
+            ⚠️ This assessment is archived. It won't appear in the active list and can't be assigned to employees until restored.
+          </div>
+        )}
 
         <div className="bg-white rounded-lg shadow-lg p-8 print:shadow-none print:p-0">
           <div className="flex items-center justify-between gap-4 mb-6 pb-6 border-b">
