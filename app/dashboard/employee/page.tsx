@@ -70,7 +70,7 @@ export default function EmployeeDashboard() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Image src="/ldr-logo-white.png" alt="LDR Logo" width={50} height={50} />
-            <h1 className="text-2xl font-bold text-white">HR Portal</h1>
+            <h1 className="text-2xl font-bold text-white">WHS Portal</h1>
           </div>
           <button onClick={handleLogout} style={{ backgroundColor: '#f89939' }} className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90">Logout</button>
         </div>
@@ -89,7 +89,7 @@ export default function EmployeeDashboard() {
               <a href="/dashboard/employee/my-training" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">🎓 My Training {stats.pendingTraining > 0 && <span style={{ backgroundColor: '#f89939' }} className="text-white text-xs font-bold px-2 py-0.5 rounded-full ml-1">{stats.pendingTraining}</span>}</a>
               <a href="/dashboard/employee/my-certifications" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📜 My Certifications {stats.pendingCertifications > 0 && <span style={{ backgroundColor: '#f89939' }} className="text-white text-xs font-bold px-2 py-0.5 rounded-full ml-1">{stats.pendingCertifications}</span>}</a>
               <a href="/dashboard/employee/my-reports" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📋 My Reports</a>
-              <a href="/dashboard/employee/documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📄 HR Documents</a>
+              <a href="/dashboard/employee/documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📄 WHS Documents</a>
             </nav>
 
             <hr />

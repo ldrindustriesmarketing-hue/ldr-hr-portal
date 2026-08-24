@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LDR HR Portal",
-  description: "LDR Industries HR Portal - safety assessments, incident reporting, and HR management.",
+  title: "LDR WHS Portal",
+  description: "LDR Industries WHS Portal - safety assessments, incident reporting, and WHS management.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

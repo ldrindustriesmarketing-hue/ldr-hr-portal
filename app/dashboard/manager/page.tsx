@@ -72,7 +72,7 @@ export default function ManagerDashboard() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Image src="/ldr-logo-white.png" alt="LDR Logo" width={50} height={50} />
-            <h1 className="text-2xl font-bold text-white">HR Portal</h1>
+            <h1 className="text-2xl font-bold text-white">WHS Portal</h1>
           </div>
           <button onClick={handleLogout} style={{ backgroundColor: '#f89939' }} className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90">Logout</button>
         </div>
@@ -125,7 +125,7 @@ export default function ManagerDashboard() {
               <p className="text-xs text-gray-500 font-semibold uppercase mb-3">Management</p>
               <nav className="space-y-2">
                 <a href="/dashboard/manager/employee-documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">🗂️ Employee Documents</a>
-                <a href="/dashboard/manager/documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📄 HR Documents</a>
+                <a href="/dashboard/manager/documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📄 WHS Documents</a>
                 <a href="/dashboard/manager/audit-trail" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📊 Audit Trail</a>
               </nav>
             </div>

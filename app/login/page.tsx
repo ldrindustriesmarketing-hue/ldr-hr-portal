@@ -77,7 +77,7 @@ export default function LoginPage() {
           </div>
 
           <h1 className="text-3xl font-bold text-center mb-2" style={{ color: '#f89939' }}>
-            HR Portal
+            WHS Portal
           </h1>
           <p className="text-gray-600 text-center mb-8">Sign in</p>
 

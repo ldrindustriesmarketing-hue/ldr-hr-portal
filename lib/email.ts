@@ -47,7 +47,7 @@ export async function sendAssessmentAssignedEmail(
             ` : ''}
             
             <p style="color: #555; font-size: 15px; line-height: 1.6; margin-top: 20px;">
-              Please log in to the HR Portal to complete and sign the assessment.
+              Please log in to the WHS Portal to complete and sign the assessment.
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -60,7 +60,7 @@ export async function sendAssessmentAssignedEmail(
             
             <p style="color: #999; font-size: 13px; margin: 0;">
               Best regards,<br>
-              <strong>LDR Industries HR Team</strong>
+              <strong>LDR Industries WHS Team</strong>
             </p>
           </div>
         </div>
@@ -115,7 +115,7 @@ export async function sendReportSubmittedEmail(
             </div>
             
             <p style="color: #555; font-size: 15px; line-height: 1.6;">
-              Please log in to the HR Portal to review and manage this report.
+              Please log in to the WHS Portal to review and manage this report.
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -128,7 +128,7 @@ export async function sendReportSubmittedEmail(
             
             <p style="color: #999; font-size: 13px; margin: 0;">
               Best regards,<br>
-              <strong>LDR Industries HR System</strong>
+              <strong>LDR Industries WHS System</strong>
             </p>
           </div>
         </div>
@@ -182,7 +182,7 @@ export async function sendAssessmentSignedEmail(
             </div>
             
             <p style="color: #555; font-size: 15px; line-height: 1.6;">
-              You can now review the signed assessment in the HR Portal.
+              You can now review the signed assessment in the WHS Portal.
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -195,7 +195,7 @@ export async function sendAssessmentSignedEmail(
             
             <p style="color: #999; font-size: 13px; margin: 0;">
               Best regards,<br>
-              <strong>LDR Industries HR System</strong>
+              <strong>LDR Industries WHS System</strong>
             </p>
           </div>
         </div>

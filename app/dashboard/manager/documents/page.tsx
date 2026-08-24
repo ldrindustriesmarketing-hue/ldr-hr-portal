@@ -102,7 +102,7 @@ export default function ManagerDocumentsPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold" style={{ color: '#f89939' }}>HR Documents</h1>
+          <h1 className="text-4xl font-bold" style={{ color: '#f89939' }}>WHS Documents</h1>
           <button onClick={() => router.back()} className="text-gray-600 hover:text-gray-800 font-semibold">← Back</button>
         </div>
 
