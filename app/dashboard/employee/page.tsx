@@ -90,6 +90,7 @@ export default function EmployeeDashboard() {
               <a href="/dashboard/employee/my-certifications" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📜 My Certifications {stats.pendingCertifications > 0 && <span style={{ backgroundColor: '#f89939' }} className="text-white text-xs font-bold px-2 py-0.5 rounded-full ml-1">{stats.pendingCertifications}</span>}</a>
               <a href="/dashboard/employee/my-reports" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📋 My Reports</a>
               <a href="/dashboard/employee/documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📄 WHS Documents</a>
+              <a href="/dashboard/employee/chemical-register" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">🧪 Chemical Register</a>
             </nav>
 
             <hr />

@@ -37,3 +37,15 @@ export function compressImageFile(file: File, maxDimension = 1200, quality = 0.8
     reader.readAsDataURL(file);
   });
 }
+
+// Plain file -> base64 data URL, no compression. Use for non-image
+// attachments (e.g. PDF Safety Data Sheets) where the canvas-based
+// compression above doesn't apply.
+export function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
+}
