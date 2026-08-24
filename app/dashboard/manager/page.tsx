@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { getDashboardStats } from '@/lib/stats';
+import { getDaysSinceStatus, getComplianceStatus } from '@/lib/dials';
 
 interface User {
   id: string;
@@ -18,6 +19,54 @@ interface Stats {
   nearmissReports: number;
   pendingAssessments: number;
   signedAssessments: number;
+  daysSinceIncident: number | null;
+  daysSinceNearMiss: number | null;
+  assessmentTotal: number;
+  assessmentSigned: number;
+  trainingTotal: number;
+  trainingSigned: number;
+}
+
+function DaysSinceTile({ label, days }: { label: string; days: number | null }) {
+  const status = getDaysSinceStatus(days);
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <p className="text-gray-600 text-sm font-semibold uppercase">{label}</p>
+      <p className="text-4xl font-bold mt-2" style={{ color: status.color }}>{days === null ? '—' : days}</p>
+      <span className={`text-xs font-bold px-2 py-1 rounded mt-2 inline-block ${status.badgeBg} ${status.badgeText}`}>{status.icon} {status.label}</span>
+    </div>
+  );
+}
+
+function ComplianceMeter({ label, signed, total }: { label: string; signed: number; total: number }) {
+  const pct = total > 0 ? Math.round((signed / total) * 100) : 0;
+  const status = getComplianceStatus(total > 0 ? pct : 100);
+  const radius = 45;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (pct / 100) * circumference;
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6 flex items-center gap-6">
+      <div className="relative w-28 h-28 flex-shrink-0">
+        <svg width="112" height="112" viewBox="0 0 112 112" className="-rotate-90">
+          <circle cx="56" cy="56" r={radius} fill="none" stroke={status.color} strokeOpacity={0.15} strokeWidth={10} />
+          <circle
+            cx="56" cy="56" r={radius} fill="none"
+            stroke={status.color} strokeWidth={10} strokeLinecap="round"
+            strokeDasharray={circumference} strokeDashoffset={offset}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-2xl font-bold text-gray-800">{total > 0 ? `${pct}%` : '—'}</span>
+        </div>
+      </div>
+      <div>
+        <p className="text-gray-600 text-sm font-semibold uppercase">{label}</p>
+        <p className="text-xs text-gray-500 mt-1">{total > 0 ? `${signed} of ${total} signed` : 'No records yet'}</p>
+        <span className={`text-xs font-bold px-2 py-1 rounded mt-2 inline-block ${status.badgeBg} ${status.badgeText}`}>{status.icon} {status.label}</span>
+      </div>
+    </div>
+  );
 }
 
 export default function ManagerDashboard() {
@@ -27,7 +76,13 @@ export default function ManagerDashboard() {
     incidentReports: 0,
     nearmissReports: 0,
     pendingAssessments: 0,
-    signedAssessments: 0
+    signedAssessments: 0,
+    daysSinceIncident: null,
+    daysSinceNearMiss: null,
+    assessmentTotal: 0,
+    assessmentSigned: 0,
+    trainingTotal: 0,
+    trainingSigned: 0
   });
   const [loadingStats, setLoadingStats] = useState(true);
   const router = useRouter();
@@ -160,6 +215,27 @@ export default function ManagerDashboard() {
               <p className="text-4xl font-bold mt-2" style={{ color: '#f89939' }}>{loadingStats ? '-' : stats.pendingAssessments}</p>
               <p className="text-xs text-gray-500 mt-2">Awaiting completion</p>
             </a>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-bold mb-4" style={{ color: '#f89939' }}>Safety & Compliance</h2>
+            <div className="grid grid-cols-2 gap-6">
+              {loadingStats ? (
+                <>
+                  <div className="bg-white rounded-lg shadow p-6 text-gray-400">Loading...</div>
+                  <div className="bg-white rounded-lg shadow p-6 text-gray-400">Loading...</div>
+                  <div className="bg-white rounded-lg shadow p-6 text-gray-400">Loading...</div>
+                  <div className="bg-white rounded-lg shadow p-6 text-gray-400">Loading...</div>
+                </>
+              ) : (
+                <>
+                  <DaysSinceTile label="Days Since Last Incident" days={stats.daysSinceIncident} />
+                  <DaysSinceTile label="Days Since Last Near-Miss" days={stats.daysSinceNearMiss} />
+                  <ComplianceMeter label="Assessment Sign-off" signed={stats.assessmentSigned} total={stats.assessmentTotal} />
+                  <ComplianceMeter label="Training Compliance" signed={stats.trainingSigned} total={stats.trainingTotal} />
+                </>
+              )}
+            </div>
           </div>
         </main>
       </div>
