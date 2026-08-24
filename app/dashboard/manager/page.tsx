@@ -159,10 +159,6 @@ export default function ManagerDashboard() {
               <p className="text-xs text-gray-500 mt-2">Awaiting completion</p>
             </div>
           </div>
-
-          <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
-            <p className="text-blue-900 font-semibold">💡 Stats update in real-time. Refresh the page to see the latest numbers.</p>
-          </div>
         </main>
       </div>
     </div>
