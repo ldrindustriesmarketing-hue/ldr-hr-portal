@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { logAudit } from '@/lib/audit';
 
 interface Employee {
   id: string;
@@ -118,6 +119,64 @@ export default function EmployeeDocumentsDetailPage() {
     }
   }
 
+  async function handleDeleteWhs(a: WhsAssignment) {
+    const warning = a.status === 'signed'
+      ? `"${a.title}" has already been signed. Deleting this will also permanently delete the signed record and signature. This cannot be undone. Continue?`
+      : `Remove "${a.title}" from this employee's assigned assessments? This cannot be undone.`;
+    if (!confirm(warning)) return;
+
+    try {
+      if (a.status === 'signed') {
+        const { error: responseError } = await supabase.from('assessment_responses').delete().eq('assignment_id', a.id);
+        if (responseError) throw responseError;
+      }
+      const { error: deleteError } = await supabase.from('assessment_assignments').delete().eq('id', a.id);
+      if (deleteError) throw deleteError;
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('assignment_deleted', userData.id, a.id, 'assessment_assignment', { employee_id: employeeId, title: a.title, status: a.status });
+
+      await fetchAll();
+    } catch (err) {
+      console.error('Error deleting assignment:', err);
+      alert('Failed to delete assignment');
+    }
+  }
+
+  async function handleDeleteTraining(t: TrainingRecord) {
+    if (!confirm(`Delete training record "${t.title}"? ${t.status === 'signed' ? 'It has already been signed by the employee. ' : ''}This cannot be undone.`)) return;
+
+    try {
+      const { error: deleteError } = await supabase.from('training_records').delete().eq('id', t.id);
+      if (deleteError) throw deleteError;
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('training_record_deleted', userData.id, t.id, 'training_record', { employee_id: employeeId, title: t.title, status: t.status });
+
+      await fetchAll();
+    } catch (err) {
+      console.error('Error deleting training record:', err);
+      alert('Failed to delete training record');
+    }
+  }
+
+  async function handleDeleteCertification(c: Certification) {
+    if (!confirm(`Delete certification "${c.title}"? ${c.status === 'signed' ? 'It has already been signed by the employee. ' : ''}This cannot be undone.`)) return;
+
+    try {
+      const { error: deleteError } = await supabase.from('certifications').delete().eq('id', c.id);
+      if (deleteError) throw deleteError;
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('certification_deleted', userData.id, c.id, 'certification', { employee_id: employeeId, title: c.title, status: c.status });
+
+      await fetchAll();
+    } catch (err) {
+      console.error('Error deleting certification:', err);
+      alert('Failed to delete certification');
+    }
+  }
+
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (error || !employee) return <div className="p-8 text-center text-red-600">{error || 'Employee not found'}</div>;
 
@@ -151,6 +210,7 @@ export default function EmployeeDocumentsDetailPage() {
                       {a.status === 'signed' && (
                         <a href={`/dashboard/employee/view-assessment/${a.id}`} style={{ backgroundColor: '#f89939' }} className="px-3 py-1.5 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap">View Signed Copy</a>
                       )}
+                      <button onClick={() => handleDeleteWhs(a)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap">🗑️ Delete</button>
                     </div>
                   </div>
                 ))}
@@ -178,6 +238,7 @@ export default function EmployeeDocumentsDetailPage() {
                       {t.status === 'signed' && (
                         <a href={`/dashboard/employee/view-record/${t.id}?type=training`} style={{ backgroundColor: '#f89939' }} className="px-3 py-1.5 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap">View</a>
                       )}
+                      <button onClick={() => handleDeleteTraining(t)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap">🗑️ Delete</button>
                     </div>
                   </div>
                 ))}
@@ -211,6 +272,7 @@ export default function EmployeeDocumentsDetailPage() {
                         {c.status === 'signed' && (
                           <a href={`/dashboard/employee/view-record/${c.id}?type=certification`} style={{ backgroundColor: '#f89939' }} className="px-3 py-1.5 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap">View</a>
                         )}
+                        <button onClick={() => handleDeleteCertification(c)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap">🗑️ Delete</button>
                       </div>
                     </div>
                   );

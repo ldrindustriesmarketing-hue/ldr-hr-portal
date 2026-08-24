@@ -81,6 +81,23 @@ export default function AllIncidentsPage() {
     }
   }
 
+  async function handleDelete(incident: Incident) {
+    if (!confirm('Delete this incident report? This cannot be undone.')) return;
+
+    try {
+      const { error } = await supabase.from('incident_reports').delete().eq('id', incident.id);
+      if (error) throw error;
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('report_deleted', userData.id, incident.id, 'incident_report', { incident_date: incident.incident_date });
+
+      await fetchIncidents();
+    } catch (err) {
+      console.error('Error deleting incident:', err);
+      alert('Failed to delete incident report');
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
@@ -174,6 +191,10 @@ export default function AllIncidentsPage() {
                           <option value="resolved">Resolved</option>
                           <option value="closed">Closed</option>
                         </select>
+                      </div>
+
+                      <div className="pt-2">
+                        <button onClick={() => handleDelete(incident)} className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:opacity-90 text-sm">🗑️ Delete Report</button>
                       </div>
                     </div>
                   )}

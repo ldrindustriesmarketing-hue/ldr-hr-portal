@@ -75,6 +75,23 @@ export default function AllNearMissPage() {
     }
   }
 
+  async function handleDelete(report: NearMiss) {
+    if (!confirm('Delete this near-miss report? This cannot be undone.')) return;
+
+    try {
+      const { error } = await supabase.from('near_miss_reports').delete().eq('id', report.id);
+      if (error) throw error;
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('report_deleted', userData.id, report.id, 'near_miss_report', { location: report.location });
+
+      await fetchNearMisses();
+    } catch (err) {
+      console.error('Error deleting near-miss report:', err);
+      alert('Failed to delete near-miss report');
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
@@ -144,6 +161,10 @@ export default function AllNearMissPage() {
                           <option value="resolved">Resolved</option>
                           <option value="closed">Closed</option>
                         </select>
+                      </div>
+
+                      <div className="pt-2">
+                        <button onClick={() => handleDelete(report)} className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:opacity-90 text-sm">🗑️ Delete Report</button>
                       </div>
                     </div>
                   )}

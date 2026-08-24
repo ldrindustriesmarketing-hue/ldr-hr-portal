@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { logAudit } from '@/lib/audit';
 
 interface AssignmentRow {
   id: string;
@@ -70,6 +71,31 @@ export default function PendingAssessmentsPage() {
       console.error('Error fetching assignments:', err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDelete(a: AssignmentRow) {
+    const warning = a.status === 'signed'
+      ? `"${a.assessment_title}" has already been signed by ${a.employee_name}. Deleting this assignment will also permanently delete their signed record and signature. This cannot be undone. Continue?`
+      : `Remove "${a.assessment_title}" assigned to ${a.employee_name}? This cannot be undone.`;
+    if (!confirm(warning)) return;
+
+    try {
+      if (a.status === 'signed') {
+        const { error: responseError } = await supabase.from('assessment_responses').delete().eq('assignment_id', a.id);
+        if (responseError) throw responseError;
+      }
+
+      const { error } = await supabase.from('assessment_assignments').delete().eq('id', a.id);
+      if (error) throw error;
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('assignment_deleted', userData.id, a.id, 'assessment_assignment', { employee: a.employee_name, assessment_title: a.assessment_title, status: a.status });
+
+      await fetchAssignments();
+    } catch (err) {
+      console.error('Error deleting assignment:', err);
+      alert('Failed to delete assignment');
     }
   }
 
@@ -148,11 +174,14 @@ export default function PendingAssessmentsPage() {
                         </span>
                       </td>
                       <td className="p-3">
-                        {a.status === 'signed' ? (
-                          <a href={`/dashboard/employee/view-assessment/${a.id}`} style={{ backgroundColor: '#f89939' }} className="px-3 py-1.5 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap inline-block">View Signed Copy</a>
-                        ) : (
-                          <a href={`/dashboard/manager/employee-documents/${a.assigned_to}`} className="px-3 py-1.5 bg-gray-700 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap inline-block">View Employee</a>
-                        )}
+                        <div className="flex gap-2">
+                          {a.status === 'signed' ? (
+                            <a href={`/dashboard/employee/view-assessment/${a.id}`} style={{ backgroundColor: '#f89939' }} className="px-3 py-1.5 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap inline-block">View Signed Copy</a>
+                          ) : (
+                            <a href={`/dashboard/manager/employee-documents/${a.assigned_to}`} className="px-3 py-1.5 bg-gray-700 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap inline-block">View Employee</a>
+                          )}
+                          <button onClick={() => handleDelete(a)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap">🗑️ Delete</button>
+                        </div>
                       </td>
                     </tr>
                   ))}

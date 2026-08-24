@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { logAudit } from '@/lib/audit';
 
 interface Report {
   id: string;
@@ -61,6 +62,23 @@ export default function AllReportsPage() {
       await fetchReports();
     } catch (err) {
       console.error('Error updating:', err);
+    }
+  }
+
+  async function handleDelete(report: Report) {
+    if (!confirm(`Delete this hazard report ("${report.hazard_name}")? This cannot be undone.`)) return;
+
+    try {
+      const { error } = await supabase.from('hazard_reports').delete().eq('id', report.id);
+      if (error) throw error;
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('report_deleted', userData.id, report.id, 'hazard_report', { hazard_name: report.hazard_name });
+
+      await fetchReports();
+    } catch (err) {
+      console.error('Error deleting report:', err);
+      alert('Failed to delete report');
     }
   }
 
@@ -133,6 +151,10 @@ export default function AllReportsPage() {
                           <option value="resolved">Resolved</option>
                           <option value="closed">Closed</option>
                         </select>
+                      </div>
+
+                      <div className="pt-2">
+                        <button onClick={() => handleDelete(report)} className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:opacity-90 text-sm">🗑️ Delete Report</button>
                       </div>
                     </div>
                   )}
