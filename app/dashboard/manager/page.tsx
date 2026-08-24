@@ -123,6 +123,7 @@ export default function ManagerDashboard() {
             <div>
               <p className="text-xs text-gray-500 font-semibold uppercase mb-3">Management</p>
               <nav className="space-y-2">
+                <a href="/dashboard/manager/employee-documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">🗂️ Employee Documents</a>
                 <a href="/dashboard/manager/documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📄 HR Documents</a>
                 <a href="/dashboard/manager/audit-trail" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📊 Audit Trail</a>
               </nav>
@@ -194,6 +195,11 @@ export default function ManagerDashboard() {
               <p className="text-xl font-bold" style={{ color: '#f89939' }}>📋</p>
               <p className="font-semibold text-gray-800 mt-2">All Assessments</p>
               <p className="text-sm text-gray-600">View and print risk & chemical assessments</p>
+            </a>
+            <a href="/dashboard/manager/employee-documents" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+              <p className="text-xl font-bold" style={{ color: '#f89939' }}>🗂️</p>
+              <p className="font-semibold text-gray-800 mt-2">Employee Documents</p>
+              <p className="text-sm text-gray-600">WHS documents, training records & certifications by employee</p>
             </a>
           </div>
 

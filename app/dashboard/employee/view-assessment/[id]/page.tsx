@@ -59,17 +59,25 @@ export default function ViewSignedAssessmentPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  async function fetchData(user: { id: string; name: string }) {
+  async function fetchData(user: { id: string; name: string; role: string }) {
     try {
       const { data: assignData, error: assignError } = await supabase.from('assessment_assignments').select('*').eq('id', assignmentId).single();
       if (assignError) throw assignError;
 
-      if (assignData.assigned_to !== user.id) {
+      const isOwner = assignData.assigned_to === user.id;
+      const isManager = user.role === 'manager' || user.role === 'admin';
+      if (!isOwner && !isManager) {
         setError('You do not have access to this assessment.');
         return;
       }
       setAssignment(assignData);
-      setEmployeeName(user.name);
+
+      if (isOwner) {
+        setEmployeeName(user.name);
+      } else {
+        const { data: empData } = await supabase.from('employees').select('name').eq('id', assignData.assigned_to).single();
+        setEmployeeName(empData?.name || 'Unknown');
+      }
 
       const table = assignData.assessment_type === 'risk' ? 'risk_assessments' : 'chemical_assessments';
 

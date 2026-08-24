@@ -17,11 +17,13 @@ interface Stats {
   pendingAssessments: number;
   signedAssessments: number;
   myReports: number;
+  pendingTraining: number;
+  pendingCertifications: number;
 }
 
 export default function EmployeeDashboard() {
   const [user, setUser] = useState<User | null>(null);
-  const [stats, setStats] = useState<Stats>({ pendingAssessments: 0, signedAssessments: 0, myReports: 0 });
+  const [stats, setStats] = useState<Stats>({ pendingAssessments: 0, signedAssessments: 0, myReports: 0, pendingTraining: 0, pendingCertifications: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
   const router = useRouter();
 
@@ -84,6 +86,8 @@ export default function EmployeeDashboard() {
 
             <nav className="space-y-2">
               <a href="/dashboard/employee/my-assessments" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">✓ My Assessments {stats.pendingAssessments > 0 && <span style={{ backgroundColor: '#f89939' }} className="text-white text-xs font-bold px-2 py-0.5 rounded-full ml-1">{stats.pendingAssessments}</span>}</a>
+              <a href="/dashboard/employee/my-training" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">🎓 My Training {stats.pendingTraining > 0 && <span style={{ backgroundColor: '#f89939' }} className="text-white text-xs font-bold px-2 py-0.5 rounded-full ml-1">{stats.pendingTraining}</span>}</a>
+              <a href="/dashboard/employee/my-certifications" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📜 My Certifications {stats.pendingCertifications > 0 && <span style={{ backgroundColor: '#f89939' }} className="text-white text-xs font-bold px-2 py-0.5 rounded-full ml-1">{stats.pendingCertifications}</span>}</a>
               <a href="/dashboard/employee/my-reports" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📋 My Reports</a>
               <a href="/dashboard/employee/documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📄 HR Documents</a>
             </nav>
