@@ -20,6 +20,7 @@ export async function getDashboardStats() {
       signedAssignmentsRes,
       allTrainingRes,
       signedTrainingRes,
+      pendingCertReviewsRes,
     ] = await Promise.all([
       supabase.from('hazard_reports').select('id', { count: 'exact' }).eq('status', 'submitted'),
       supabase.from('incident_reports').select('id', { count: 'exact' }).eq('status', 'submitted'),
@@ -32,6 +33,7 @@ export async function getDashboardStats() {
       supabase.from('assessment_assignments').select('id', { count: 'exact' }).eq('status', 'signed'),
       supabase.from('training_records').select('id', { count: 'exact' }),
       supabase.from('training_records').select('id', { count: 'exact' }).eq('status', 'signed'),
+      supabase.from('certifications').select('id', { count: 'exact' }).eq('status', 'pending_review'),
     ]);
 
     return {
@@ -46,6 +48,7 @@ export async function getDashboardStats() {
       assessmentSigned: signedAssignmentsRes.count || 0,
       trainingTotal: allTrainingRes.count || 0,
       trainingSigned: signedTrainingRes.count || 0,
+      pendingCertReviews: pendingCertReviewsRes.count || 0,
     };
   } catch (err) {
     console.error('Error fetching stats:', err);
@@ -61,6 +64,7 @@ export async function getDashboardStats() {
       assessmentSigned: 0,
       trainingTotal: 0,
       trainingSigned: 0,
+      pendingCertReviews: 0,
     };
   }
 }

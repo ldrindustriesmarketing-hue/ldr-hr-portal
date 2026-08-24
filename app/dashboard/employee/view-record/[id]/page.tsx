@@ -18,6 +18,8 @@ interface RecordData {
   notes: string | null;
   photo: string | null;
   status: string;
+  source?: string | null;
+  rejection_reason?: string | null;
   signature_data: string | null;
   checkbox_acknowledged: boolean;
   signed_date: string | null;
@@ -79,6 +81,10 @@ export default function ViewRecordPage() {
   if (!record) return <div className="p-8 text-center">Record not found</div>;
 
   const signedDate = record.signed_date ? new Date(record.signed_date) : null;
+  const isPendingReview = type === 'certification' && record.status === 'pending_review';
+  const isRejected = type === 'certification' && record.status === 'rejected';
+  const isSelfSubmitted = type === 'certification' && record.source === 'employee';
+  const statusLabel = isPendingReview ? 'Pending Review' : isRejected ? 'Rejected' : isSelfSubmitted ? 'Approved' : 'Signed';
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 print:bg-white print:p-0">
@@ -130,12 +136,27 @@ export default function ViewRecordPage() {
           </div>
 
           <div>
-            <h3 className="font-bold text-lg mb-4" style={{ color: '#f89939' }}>Employee Acknowledgement</h3>
+            <h3 className="font-bold text-lg mb-4" style={{ color: '#f89939' }}>{isSelfSubmitted ? 'Employee Attestation' : 'Employee Acknowledgement'}</h3>
+
+            {isPendingReview && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
+                <p className="text-yellow-900">⏳ This certification was submitted by the employee and is awaiting manager review before it's verified.</p>
+              </div>
+            )}
+
+            {isRejected && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+                <p className="text-red-900">❌ This submission was rejected{record.rejection_reason ? `: ${record.rejection_reason}` : '.'}</p>
+              </div>
+            )}
+
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg print:bg-white print:border-gray-300 mb-4">
               <p className="text-blue-900">
                 {record.checkbox_acknowledged ? '✅' : '❌'}{' '}
                 {type === 'training'
                   ? 'The employee acknowledged that they received and understood this on-the-job training.'
+                  : isSelfSubmitted
+                  ? 'The employee confirmed they hold this certification and that the details provided are genuine and accurate.'
                   : 'The employee acknowledged that this certification record is accurate.'}
               </p>
             </div>
@@ -153,7 +174,7 @@ export default function ViewRecordPage() {
               <div className="text-sm text-gray-700 space-y-1">
                 <p><span className="font-semibold">Signed by:</span> {employeeName}</p>
                 {signedDate && <p><span className="font-semibold">Date:</span> {signedDate.toLocaleDateString()} {signedDate.toLocaleTimeString()}</p>}
-                <p><span className="font-semibold">Status:</span> Signed</p>
+                <p><span className="font-semibold">Status:</span> {statusLabel}</p>
               </div>
             </div>
           </div>

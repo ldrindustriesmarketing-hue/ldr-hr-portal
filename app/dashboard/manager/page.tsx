@@ -25,6 +25,7 @@ interface Stats {
   assessmentSigned: number;
   trainingTotal: number;
   trainingSigned: number;
+  pendingCertReviews: number;
 }
 
 function DaysSinceTile({ label, days }: { label: string; days: number | null }) {
@@ -82,7 +83,8 @@ export default function ManagerDashboard() {
     assessmentTotal: 0,
     assessmentSigned: 0,
     trainingTotal: 0,
-    trainingSigned: 0
+    trainingSigned: 0,
+    pendingCertReviews: 0
   });
   const [loadingStats, setLoadingStats] = useState(true);
   const router = useRouter();
@@ -180,6 +182,7 @@ export default function ManagerDashboard() {
               <p className="text-xs text-gray-500 font-semibold uppercase mb-3">Management</p>
               <nav className="space-y-2">
                 <a href="/dashboard/manager/employee-documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">🗂️ Employee Documents</a>
+                <a href="/dashboard/manager/pending-certifications" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📥 Certification Reviews {stats.pendingCertReviews > 0 && <span style={{ backgroundColor: '#f89939' }} className="text-white text-xs font-bold px-2 py-0.5 rounded-full ml-1">{stats.pendingCertReviews}</span>}</a>
                 <a href="/dashboard/manager/documents" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📄 WHS Documents</a>
                 <a href="/dashboard/manager/chemical-register" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">🧪 Chemical Register</a>
                 <a href="/dashboard/manager/audit-trail" className="block px-4 py-2 text-gray-700 hover:bg-orange-50 rounded text-sm">📊 Audit Trail</a>

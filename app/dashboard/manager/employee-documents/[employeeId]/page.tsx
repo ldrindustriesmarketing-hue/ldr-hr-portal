@@ -36,6 +36,15 @@ interface Certification {
   issue_date: string;
   expiry_date: string | null;
   status: string;
+  source: string | null;
+  rejection_reason: string | null;
+}
+
+function certStatusBadge(status: string, source: string | null) {
+  if (status === 'pending_review') return { label: 'PENDING REVIEW', color: 'bg-blue-100 text-blue-800' };
+  if (status === 'rejected') return { label: 'REJECTED', color: 'bg-red-100 text-red-800' };
+  if (status === 'signed') return { label: source === 'employee' ? 'APPROVED' : 'SIGNED', color: 'bg-green-100 text-green-800' };
+  return { label: 'PENDING SIGNATURE', color: 'bg-yellow-100 text-yellow-800' };
 }
 
 function expiryInfo(expiryDate: string | null) {
@@ -106,7 +115,7 @@ export default function EmployeeDocumentsDetailPage() {
 
       const { data: certData, error: certError } = await supabase
         .from('certifications')
-        .select('id, title, issuer, issue_date, expiry_date, status')
+        .select('id, title, issuer, issue_date, expiry_date, status, source, rejection_reason')
         .eq('employee_id', employeeId)
         .order('issue_date', { ascending: false });
       if (certError) throw certError;
@@ -174,6 +183,41 @@ export default function EmployeeDocumentsDetailPage() {
     } catch (err) {
       console.error('Error deleting certification:', err);
       alert('Failed to delete certification');
+    }
+  }
+
+  async function handleApproveCertification(c: Certification) {
+    if (!confirm(`Approve "${c.title}"? This confirms you've verified it and marks it as complete on the register.`)) return;
+
+    try {
+      const { error: updateError } = await supabase.from('certifications').update({ status: 'signed', rejection_reason: null }).eq('id', c.id);
+      if (updateError) throw updateError;
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('certification_approved', userData.id, c.id, 'certification', { employee_id: employeeId, title: c.title });
+
+      await fetchAll();
+    } catch (err) {
+      console.error('Error approving certification:', err);
+      alert('Failed to approve certification');
+    }
+  }
+
+  async function handleRejectCertification(c: Certification) {
+    const reason = prompt(`Reject "${c.title}"? Enter a reason (shown to the employee):`);
+    if (reason === null) return;
+
+    try {
+      const { error: updateError } = await supabase.from('certifications').update({ status: 'rejected', rejection_reason: reason || null }).eq('id', c.id);
+      if (updateError) throw updateError;
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('certification_rejected', userData.id, c.id, 'certification', { employee_id: employeeId, title: c.title, reason });
+
+      await fetchAll();
+    } catch (err) {
+      console.error('Error rejecting certification:', err);
+      alert('Failed to reject certification');
     }
   }
 
@@ -257,23 +301,38 @@ export default function EmployeeDocumentsDetailPage() {
               <div className="space-y-2">
                 {certifications.map((c) => {
                   const expiry = expiryInfo(c.expiry_date);
+                  const badge = certStatusBadge(c.status, c.source);
                   return (
-                    <div key={c.id} className="flex justify-between items-center p-3 border rounded-lg">
-                      <div>
-                        <p className="font-semibold text-gray-800">{c.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {c.issuer ? `${c.issuer} · ` : ''}Issued {c.issue_date ? new Date(c.issue_date).toLocaleDateString() : '—'}
-                          {c.expiry_date ? ` · Expires ${new Date(c.expiry_date).toLocaleDateString()}` : ''}
-                        </p>
+                    <div key={c.id} className="p-3 border rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-gray-800">
+                            {c.title}
+                            {c.source === 'employee' && <span className="ml-2 text-xs font-normal text-gray-500">(submitted by employee)</span>}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {c.issuer ? `${c.issuer} · ` : ''}Issued {c.issue_date ? new Date(c.issue_date).toLocaleDateString() : '—'}
+                            {c.expiry_date ? ` · Expires ${new Date(c.expiry_date).toLocaleDateString()}` : ''}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {expiry && <span className={`text-xs font-bold px-2 py-1 rounded ${expiry.color}`}>{expiry.label}</span>}
+                          <span className={`text-xs font-bold px-2 py-1 rounded ${badge.color}`}>{badge.label}</span>
+                          {(c.status === 'signed' || c.status === 'pending_review' || c.status === 'rejected') && (
+                            <a href={`/dashboard/employee/view-record/${c.id}?type=certification`} style={{ backgroundColor: '#f89939' }} className="px-3 py-1.5 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap">View</a>
+                          )}
+                          {c.status === 'pending_review' && (
+                            <>
+                              <button onClick={() => handleApproveCertification(c)} className="px-3 py-1.5 bg-green-600 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap">✅ Approve</button>
+                              <button onClick={() => handleRejectCertification(c)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap">❌ Reject</button>
+                            </>
+                          )}
+                          <button onClick={() => handleDeleteCertification(c)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap">🗑️ Delete</button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        {expiry && <span className={`text-xs font-bold px-2 py-1 rounded ${expiry.color}`}>{expiry.label}</span>}
-                        <span className={`text-xs font-bold px-2 py-1 rounded ${c.status === 'signed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{c.status.toUpperCase()}</span>
-                        {c.status === 'signed' && (
-                          <a href={`/dashboard/employee/view-record/${c.id}?type=certification`} style={{ backgroundColor: '#f89939' }} className="px-3 py-1.5 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap">View</a>
-                        )}
-                        <button onClick={() => handleDeleteCertification(c)} className="px-3 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:opacity-90 text-xs whitespace-nowrap">🗑️ Delete</button>
-                      </div>
+                      {c.status === 'rejected' && c.rejection_reason && (
+                        <p className="text-xs text-red-700 mt-2 pt-2 border-t">❌ Rejected: {c.rejection_reason}</p>
+                      )}
                     </div>
                   );
                 })}

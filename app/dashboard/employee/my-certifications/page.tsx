@@ -11,6 +11,15 @@ interface Certification {
   issue_date: string | null;
   expiry_date: string | null;
   status: string;
+  source: string | null;
+  rejection_reason: string | null;
+}
+
+function statusBadge(status: string, source: string | null) {
+  if (status === 'pending_review') return { label: 'PENDING REVIEW', color: 'bg-blue-100 text-blue-800' };
+  if (status === 'rejected') return { label: 'REJECTED', color: 'bg-red-100 text-red-800' };
+  if (status === 'signed') return { label: source === 'employee' ? 'APPROVED' : 'SIGNED', color: 'bg-green-100 text-green-800' };
+  return { label: 'PENDING SIGNATURE', color: 'bg-yellow-100 text-yellow-800' };
 }
 
 function expiryInfo(expiryDate: string | null) {
@@ -40,7 +49,7 @@ export default function MyCertificationsPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from('certifications')
-        .select('id, title, issuer, issue_date, expiry_date, status')
+        .select('id, title, issuer, issue_date, expiry_date, status, source, rejection_reason')
         .eq('employee_id', userId)
         .order('issue_date', { ascending: false });
 
@@ -58,7 +67,10 @@ export default function MyCertificationsPage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold" style={{ color: '#f89939' }}>My Certifications</h1>
-          <button onClick={() => router.back()} className="text-gray-600 hover:text-gray-800 font-semibold">← Back</button>
+          <div className="flex gap-3">
+            <a href="/dashboard/employee/add-certification" style={{ backgroundColor: '#f89939' }} className="px-4 py-2 text-white rounded-lg font-semibold hover:opacity-90 text-sm">➕ Upload My Certification</a>
+            <button onClick={() => router.back()} className="text-gray-600 hover:text-gray-800 font-semibold">← Back</button>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6">
@@ -70,25 +82,29 @@ export default function MyCertificationsPage() {
             <div className="space-y-3">
               {records.map((r) => {
                 const expiry = expiryInfo(r.expiry_date);
+                const badge = statusBadge(r.status, r.source);
                 return (
-                  <div key={r.id} className="flex justify-between items-center p-4 border rounded-lg">
-                    <div>
-                      <p className="font-semibold text-gray-800">{r.title}</p>
-                      <p className="text-sm text-gray-600">
-                        {r.issuer ? `${r.issuer} · ` : ''}Issued {r.issue_date ? new Date(r.issue_date).toLocaleDateString() : '—'}
-                        {r.expiry_date ? ` · Expires ${new Date(r.expiry_date).toLocaleDateString()}` : ''}
-                      </p>
-                      <div className="flex gap-2 mt-2">
-                        <span className={`text-xs font-bold px-2 py-1 rounded inline-block ${r.status === 'signed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                          {r.status.toUpperCase()}
-                        </span>
-                        {expiry && <span className={`text-xs font-bold px-2 py-1 rounded inline-block ${expiry.color}`}>{expiry.label}</span>}
+                  <div key={r.id} className="p-4 border rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-semibold text-gray-800">{r.title}</p>
+                        <p className="text-sm text-gray-600">
+                          {r.issuer ? `${r.issuer} · ` : ''}Issued {r.issue_date ? new Date(r.issue_date).toLocaleDateString() : '—'}
+                          {r.expiry_date ? ` · Expires ${new Date(r.expiry_date).toLocaleDateString()}` : ''}
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                          <span className={`text-xs font-bold px-2 py-1 rounded inline-block ${badge.color}`}>{badge.label}</span>
+                          {expiry && <span className={`text-xs font-bold px-2 py-1 rounded inline-block ${expiry.color}`}>{expiry.label}</span>}
+                        </div>
                       </div>
+                      {r.status === 'pending' ? (
+                        <a href={`/dashboard/employee/sign-record/${r.id}?type=certification`} style={{ backgroundColor: '#f89939' }} className="px-4 py-2 text-white rounded-lg font-semibold hover:opacity-90 text-sm whitespace-nowrap">Review & Sign</a>
+                      ) : (
+                        <a href={`/dashboard/employee/view-record/${r.id}?type=certification`} className="px-4 py-2 bg-gray-700 text-white rounded-lg font-semibold hover:opacity-90 text-sm whitespace-nowrap">View</a>
+                      )}
                     </div>
-                    {r.status === 'pending' ? (
-                      <a href={`/dashboard/employee/sign-record/${r.id}?type=certification`} style={{ backgroundColor: '#f89939' }} className="px-4 py-2 text-white rounded-lg font-semibold hover:opacity-90 text-sm whitespace-nowrap">Review & Sign</a>
-                    ) : (
-                      <a href={`/dashboard/employee/view-record/${r.id}?type=certification`} className="px-4 py-2 bg-gray-700 text-white rounded-lg font-semibold hover:opacity-90 text-sm whitespace-nowrap">View</a>
+                    {r.status === 'rejected' && r.rejection_reason && (
+                      <p className="text-sm text-red-700 mt-3 pt-3 border-t">❌ Rejected: {r.rejection_reason}</p>
                     )}
                   </div>
                 );
