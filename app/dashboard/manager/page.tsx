@@ -160,39 +160,6 @@ export default function ManagerDashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            <a href="/dashboard/manager/all-reports" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
-              <p className="text-xl font-bold" style={{ color: '#f89939' }}>📋</p>
-              <p className="font-semibold text-gray-800 mt-2">View Hazard Reports</p>
-              <p className="text-sm text-gray-600">Manage and track hazard reports</p>
-            </a>
-            <a href="/dashboard/manager/audit-trail" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
-              <p className="text-xl font-bold" style={{ color: '#f89939' }}>📊</p>
-              <p className="font-semibold text-gray-800 mt-2">Audit Trail</p>
-              <p className="text-sm text-gray-600">View system activity and compliance logs</p>
-            </a>
-            <a href="/dashboard/manager/documents" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
-              <p className="text-xl font-bold" style={{ color: '#f89939' }}>📄</p>
-              <p className="font-semibold text-gray-800 mt-2">HR Documents</p>
-              <p className="text-sm text-gray-600">Upload and manage company documents</p>
-            </a>
-            <a href="/dashboard/manager/all-incidents" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
-              <p className="text-xl font-bold" style={{ color: '#f89939' }}>🚨</p>
-              <p className="font-semibold text-gray-800 mt-2">Incident Reports</p>
-              <p className="text-sm text-gray-600">Review all incident reports</p>
-            </a>
-            <a href="/dashboard/manager/assessments" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
-              <p className="text-xl font-bold" style={{ color: '#f89939' }}>📋</p>
-              <p className="font-semibold text-gray-800 mt-2">All Assessments</p>
-              <p className="text-sm text-gray-600">View and print risk & chemical assessments</p>
-            </a>
-            <a href="/dashboard/manager/employee-documents" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
-              <p className="text-xl font-bold" style={{ color: '#f89939' }}>🗂️</p>
-              <p className="font-semibold text-gray-800 mt-2">Employee Documents</p>
-              <p className="text-sm text-gray-600">WHS documents, training records & certifications by employee</p>
-            </a>
-          </div>
-
           <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
             <p className="text-blue-900 font-semibold">💡 Stats update in real-time. Refresh the page to see the latest numbers.</p>
           </div>
