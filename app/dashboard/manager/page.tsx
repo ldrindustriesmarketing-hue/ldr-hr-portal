@@ -138,26 +138,26 @@ export default function ManagerDashboard() {
           </div>
 
           <div className="grid grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow p-6">
+            <a href="/dashboard/manager/all-reports" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
               <p className="text-gray-600 text-sm font-semibold uppercase">Hazard Reports</p>
               <p className="text-4xl font-bold mt-2" style={{ color: '#f89939' }}>{loadingStats ? '-' : stats.hazardReports}</p>
               <p className="text-xs text-gray-500 mt-2">Submitted status</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
+            </a>
+            <a href="/dashboard/manager/all-incidents" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
               <p className="text-gray-600 text-sm font-semibold uppercase">Incident Reports</p>
               <p className="text-4xl font-bold mt-2" style={{ color: '#f89939' }}>{loadingStats ? '-' : stats.incidentReports}</p>
               <p className="text-xs text-gray-500 mt-2">Submitted status</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
+            </a>
+            <a href="/dashboard/manager/all-nearmiss" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
               <p className="text-gray-600 text-sm font-semibold uppercase">Near-Miss Reports</p>
               <p className="text-4xl font-bold mt-2" style={{ color: '#f89939' }}>{loadingStats ? '-' : stats.nearmissReports}</p>
               <p className="text-xs text-gray-500 mt-2">Submitted status</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-6">
+            </a>
+            <a href="/dashboard/manager/assessments" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
               <p className="text-gray-600 text-sm font-semibold uppercase">Pending Assessments</p>
               <p className="text-4xl font-bold mt-2" style={{ color: '#f89939' }}>{loadingStats ? '-' : stats.pendingAssessments}</p>
               <p className="text-xs text-gray-500 mt-2">Awaiting completion</p>
-            </div>
+            </a>
           </div>
         </main>
       </div>
