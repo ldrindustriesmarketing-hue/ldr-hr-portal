@@ -163,10 +163,9 @@ export default function ManagerDashboard() {
           <div className="bg-white rounded-lg shadow p-8">
             <h2 className="text-2xl font-bold mb-6" style={{ color: '#f89939' }}>Quick Actions</h2>
             <div className="grid grid-cols-2 gap-4">
-              <a href="/dashboard/manager/report-hazard" style={{ backgroundColor: '#f89939' }} className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 text-center text-sm">⚠️ Report Hazard</a>
-              <a href="/dashboard/manager/report-incident" style={{ backgroundColor: '#f89939' }} className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 text-center text-sm">🚨 Report Incident</a>
               <a href="/dashboard/manager/create-risk-assessment" style={{ backgroundColor: '#f89939' }} className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 text-center text-sm">➕ New Risk Assessment</a>
               <a href="/dashboard/manager/assign-assessments" style={{ backgroundColor: '#f89939' }} className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 text-center text-sm">✓ Assign Assessments</a>
+              <a href="/dashboard/manager/add-training-record" style={{ backgroundColor: '#f89939' }} className="px-6 py-3 text-white rounded-lg font-semibold hover:opacity-90 text-center text-sm">🎓 Record Employee Training</a>
             </div>
           </div>
 
