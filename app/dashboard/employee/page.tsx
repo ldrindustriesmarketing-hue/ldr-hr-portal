@@ -55,7 +55,8 @@ export default function EmployeeDashboard() {
     }
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    await supabase.auth.signOut();
     localStorage.removeItem('user');
     router.push('/login');
   }
@@ -72,7 +73,10 @@ export default function EmployeeDashboard() {
             <Image src="/ldr-logo-white.png" alt="LDR Logo" width={50} height={50} />
             <h1 className="text-2xl font-bold text-white">WHS Portal</h1>
           </div>
-          <button onClick={handleLogout} style={{ backgroundColor: '#f89939' }} className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90">Logout</button>
+          <div className="flex items-center gap-3">
+            <a href="/dashboard/change-password" className="text-white text-sm font-semibold hover:opacity-80">Change Password</a>
+            <button onClick={handleLogout} style={{ backgroundColor: '#f89939' }} className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90">Logout</button>
+          </div>
         </div>
       </header>
 

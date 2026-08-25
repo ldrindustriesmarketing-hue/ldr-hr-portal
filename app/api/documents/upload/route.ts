@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseForRequest } from '@/lib/supabaseServer';
 
 async function getSharePointToken() {
   const tokenUrl = `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/oauth2/v2.0/token`;
@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`File uploaded to SharePoint: ${sharePointUrl}`);
 
+    const supabase = supabaseForRequest(request);
     const { data, error } = await supabase
       .from('documents')
       .insert({

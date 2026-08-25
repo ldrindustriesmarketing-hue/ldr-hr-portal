@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+
+async function authHeaders(): Promise<HeadersInit> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session ? { Authorization: `Bearer ${session.access_token}` } : {};
+}
 
 interface Document {
   id: string;
@@ -35,7 +41,7 @@ export default function ManagerDocumentsPage() {
   async function fetchDocuments() {
     try {
       setLoading(true);
-      const response = await fetch('/api/documents/list');
+      const response = await fetch('/api/documents/list', { headers: await authHeaders() });
       const data = await response.json();
       setDocuments(data || []);
     } catch (err) {
@@ -68,6 +74,7 @@ export default function ManagerDocumentsPage() {
 
       const response = await fetch('/api/documents/upload', {
         method: 'POST',
+        headers: await authHeaders(),
         body: formData
       });
 
@@ -89,7 +96,7 @@ export default function ManagerDocumentsPage() {
     if (!confirm('Delete this document?')) return;
 
     try {
-      const response = await fetch(`/api/documents/delete/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/documents/delete/${id}`, { method: 'DELETE', headers: await authHeaders() });
       if (!response.ok) throw new Error('Delete failed');
       await fetchDocuments();
     } catch (err) {

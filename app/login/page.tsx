@@ -16,34 +16,24 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      console.log('Attempting login with:', email);
-      
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (authError || !authData.session) {
+        setError('Invalid email or password');
+        setLoading(false);
+        return;
+      }
+
       const { data, error: fetchError } = await supabase
         .from('employees')
         .select('id, name, email, role, department')
-        .eq('email', email)
+        .eq('auth_user_id', authData.user.id)
         .single();
 
-      console.log('Query result:', { data, fetchError });
-
-      if (fetchError) {
-        console.error('Query error:', fetchError);
-        setError('Invalid email or password');
-        setLoading(false);
-        return;
-      }
-
-      if (!data) {
-        console.error('No data returned');
-        setError('Invalid email or password');
-        setLoading(false);
-        return;
-      }
-
-      console.log('Employee found:', data);
-
-      if (password !== 'password123') {
-        setError('Invalid email or password');
+      if (fetchError || !data) {
+        console.error('No employee profile linked to this account:', fetchError);
+        setError('Your account is not linked to an employee profile. Contact your administrator.');
+        await supabase.auth.signOut();
         setLoading(false);
         return;
       }
@@ -115,11 +105,6 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-
-          <div className="mt-6 pt-6 border-t text-sm text-gray-600">
-            <p><strong>Demo:</strong> robert@ldrindustries.com.au</p>
-            <p><strong>Password:</strong> password123</p>
-          </div>
         </div>
       </div>
     </div>

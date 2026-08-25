@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+
+async function authHeaders(): Promise<HeadersInit> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session ? { Authorization: `Bearer ${session.access_token}` } : {};
+}
 
 interface Document {
   id: string;
@@ -30,7 +36,7 @@ export default function EmployeeDocumentsPage() {
   async function fetchDocuments() {
     try {
       setLoading(true);
-      const response = await fetch('/api/documents/list');
+      const response = await fetch('/api/documents/list', { headers: await authHeaders() });
       const data = await response.json();
       setDocuments(data || []);
     } catch (err) {
