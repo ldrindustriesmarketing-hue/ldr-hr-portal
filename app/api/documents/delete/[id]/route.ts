@@ -21,8 +21,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
 
     return NextResponse.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Delete error:', err);
-    return NextResponse.json({ error: 'Delete failed: ' + String(err) }, { status: 500 });
+    const detail = err?.message || (typeof err === 'string' ? err : JSON.stringify(err));
+    return NextResponse.json({ error: 'Delete failed: ' + detail }, { status: 500 });
   }
 }

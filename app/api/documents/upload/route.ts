@@ -136,8 +136,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, document: data[0] });
-  } catch (err) {
+  } catch (err: any) {
     console.error('Upload error:', err);
-    return NextResponse.json({ error: 'Upload failed: ' + String(err) }, { status: 500 });
+    const detail = err?.message || err?.error_description || err?.details || (typeof err === 'string' ? err : JSON.stringify(err));
+    return NextResponse.json({ error: 'Upload failed: ' + detail }, { status: 500 });
   }
 }
