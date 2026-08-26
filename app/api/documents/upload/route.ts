@@ -34,6 +34,24 @@ async function getSharePointToken() {
   return data.access_token;
 }
 
+async function graphFetch(step: string, url: string, token: string, init?: RequestInit) {
+  const response = await fetch(url, {
+    ...init,
+    headers: { Authorization: `Bearer ${token}`, ...(init?.headers || {}) },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`Graph error at step "${step}":`, response.status, errorText);
+    let parsed: any = null;
+    try { parsed = JSON.parse(errorText); } catch {}
+    const detail = parsed?.error?.message || errorText;
+    throw new Error(`SharePoint step "${step}" failed (${response.status}): ${detail}`);
+  }
+
+  return response;
+}
+
 async function uploadToSharePoint(file: File, fileName: string) {
   try {
     const token = await getSharePointToken();
@@ -41,29 +59,34 @@ async function uploadToSharePoint(file: File, fileName: string) {
     const siteName = process.env.SHAREPOINT_SITE_NAME;
     const siteId = process.env.SHAREPOINT_SITE_ID;
 
-    const uploadUrl = `https://graph.microsoft.com/v1.0/sites/${siteName}.sharepoint.com:/sites/${siteId}:/drive/root:/%5B03-09-01%20Policies%5D/${fileName}:/content`;
-
-    const arrayBuffer = await file.arrayBuffer();
-
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': file.type || 'application/octet-stream'
-      },
-      body: arrayBuffer
-    });
-
-    if (!uploadResponse.ok) {
-      const errorData = await uploadResponse.text();
-      console.error('SharePoint upload error:', uploadResponse.status, errorData);
-      let parsed: any = null;
-      try { parsed = JSON.parse(errorData); } catch {}
-      const detail = parsed?.error?.message || errorData;
-      throw new Error(`SharePoint upload failed (${uploadResponse.status}): ${detail}`);
+    if (!siteName || !siteId) {
+      throw new Error('Missing env vars: SHAREPOINT_SITE_NAME and/or SHAREPOINT_SITE_ID');
     }
 
-    const uploadedFile = await uploadResponse.json();
+    // Step 1: resolve the site by hostname + relative path.
+    const siteRes = await graphFetch(
+      'resolve site',
+      `https://graph.microsoft.com/v1.0/sites/${siteName}.sharepoint.com:/sites/${siteId}`,
+      token
+    );
+    const site = await siteRes.json();
+
+    // Step 2: get that site's default document library drive.
+    const driveRes = await graphFetch('get default drive', `https://graph.microsoft.com/v1.0/sites/${site.id}/drive`, token);
+    const drive = await driveRes.json();
+
+    // Step 3: upload into that drive at the target folder path.
+    const folderPath = '[03-09-01 Policies]';
+    const uploadUrl = `https://graph.microsoft.com/v1.0/drives/${drive.id}/root:/${encodeURIComponent(folderPath)}/${encodeURIComponent(fileName)}:/content`;
+
+    const arrayBuffer = await file.arrayBuffer();
+    const uploadRes = await graphFetch('upload file', uploadUrl, token, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: arrayBuffer,
+    });
+
+    const uploadedFile = await uploadRes.json();
     return uploadedFile.webUrl;
   } catch (err) {
     console.error('SharePoint upload error:', err);
