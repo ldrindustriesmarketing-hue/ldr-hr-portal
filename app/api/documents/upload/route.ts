@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseForRequest } from '@/lib/supabaseServer';
 
 async function getSharePointToken() {
+  const missing = ['AZURE_TENANT_ID', 'AZURE_CLIENT_ID', 'AZURE_CLIENT_SECRET'].filter((k) => !process.env[k]);
+  if (missing.length) {
+    throw new Error(`Missing env vars: ${missing.join(', ')}`);
+  }
+
   const tokenUrl = `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/oauth2/v2.0/token`;
 
   const body = new URLSearchParams({
@@ -17,7 +22,12 @@ async function getSharePointToken() {
   });
 
   if (!response.ok) {
-    throw new Error('Failed to get SharePoint token');
+    const errorBody = await response.text();
+    console.error('SharePoint token error:', response.status, errorBody);
+    let parsed: any = null;
+    try { parsed = JSON.parse(errorBody); } catch {}
+    const detail = parsed?.error_description || parsed?.error || errorBody;
+    throw new Error(`Failed to get SharePoint token (${response.status}): ${detail}`);
   }
 
   const data = await response.json();
@@ -46,8 +56,11 @@ async function uploadToSharePoint(file: File, fileName: string) {
 
     if (!uploadResponse.ok) {
       const errorData = await uploadResponse.text();
-      console.error('SharePoint upload error:', errorData);
-      throw new Error(`SharePoint upload failed: ${uploadResponse.status}`);
+      console.error('SharePoint upload error:', uploadResponse.status, errorData);
+      let parsed: any = null;
+      try { parsed = JSON.parse(errorData); } catch {}
+      const detail = parsed?.error?.message || errorData;
+      throw new Error(`SharePoint upload failed (${uploadResponse.status}): ${detail}`);
     }
 
     const uploadedFile = await uploadResponse.json();
