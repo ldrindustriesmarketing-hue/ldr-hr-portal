@@ -38,8 +38,8 @@ export default function AssessmentsPage() {
     try {
       setLoading(true);
       const [riskRes, chemicalRes] = await Promise.all([
-        supabase.from('risk_assessments').select('*'),
-        supabase.from('chemical_assessments').select('*'),
+        supabase.from('risk_assessments').select('id, title, department, status, content, version, created_at'),
+        supabase.from('chemical_assessments').select('id, title, department, status, content, version, created_at'),
       ]);
 
       const risk: AssessmentRow[] = (riskRes.data || []).map((a: any) => ({

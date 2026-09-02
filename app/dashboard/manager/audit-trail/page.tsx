@@ -32,7 +32,7 @@ export default function AuditTrailPage() {
   async function fetchAuditLogs() {
     try {
       setLoading(true);
-      let query = supabase.from('audit_trail').select('*').order('timestamp', { ascending: false });
+      let query = supabase.from('audit_trail').select('*').order('timestamp', { ascending: false }).limit(500);
 
       if (filterAction !== 'all') {
         query = query.eq('action', filterAction);

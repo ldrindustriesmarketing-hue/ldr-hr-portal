@@ -14,7 +14,6 @@ interface ChemicalEntry {
   hazard_classification: string | null;
   sds_review_date: string | null;
   notes: string | null;
-  sds_document: string | null;
 }
 
 export default function EmployeeChemicalRegisterPage() {
@@ -23,6 +22,8 @@ export default function EmployeeChemicalRegisterPage() {
   const [search, setSearch] = useState('');
   const [hazardFilter, setHazardFilter] = useState('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [sdsCache, setSdsCache] = useState<Record<string, string>>({});
+  const [sdsLoadingId, setSdsLoadingId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export default function EmployeeChemicalRegisterPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from('chemical_register')
-        .select('id, product_name, manufacturer, location, quantity, hazard_classification, sds_review_date, notes, sds_document')
+        .select('id, product_name, manufacturer, location, quantity, hazard_classification, sds_review_date, notes')
         .eq('status', 'active')
         .order('product_name', { ascending: true });
       if (error) throw error;
@@ -48,6 +49,23 @@ export default function EmployeeChemicalRegisterPage() {
       console.error('Error fetching chemical register:', err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function toggleExpand(id: string) {
+    const opening = expandedId !== id;
+    setExpandedId(opening ? id : null);
+
+    if (opening && !(id in sdsCache)) {
+      setSdsLoadingId(id);
+      try {
+        const { data } = await supabase.from('chemical_register').select('sds_document').eq('id', id).single();
+        setSdsCache((prev) => ({ ...prev, [id]: data?.sds_document || '' }));
+      } catch (err) {
+        console.error('Error fetching SDS document:', err);
+      } finally {
+        setSdsLoadingId(null);
+      }
     }
   }
 
@@ -98,7 +116,7 @@ export default function EmployeeChemicalRegisterPage() {
                 const expanded = expandedId === c.id;
                 return (
                   <div key={c.id} className="border rounded-lg">
-                    <button onClick={() => setExpandedId(expanded ? null : c.id)} className="w-full flex justify-between items-center p-4 text-left hover:bg-gray-50">
+                    <button onClick={() => toggleExpand(c.id)} className="w-full flex justify-between items-center p-4 text-left hover:bg-gray-50">
                       <div>
                         <p className="font-semibold text-gray-800">{c.product_name}</p>
                         <p className="text-xs text-gray-500">{c.manufacturer || 'Unknown manufacturer'} {c.location ? `· ${c.location}` : ''}</p>
@@ -121,8 +139,10 @@ export default function EmployeeChemicalRegisterPage() {
                             <p className="text-gray-800 whitespace-pre-wrap">{c.notes}</p>
                           </div>
                         )}
-                        {c.sds_document ? (
-                          <a href={c.sds_document} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#f89939' }} className="inline-block px-4 py-2 text-white rounded-lg font-semibold hover:opacity-90 text-sm mt-2">📄 View Safety Data Sheet</a>
+                        {sdsLoadingId === c.id ? (
+                          <p className="text-gray-500 text-sm mt-2">Loading SDS document...</p>
+                        ) : sdsCache[c.id] ? (
+                          <a href={sdsCache[c.id]} target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#f89939' }} className="inline-block px-4 py-2 text-white rounded-lg font-semibold hover:opacity-90 text-sm mt-2">📄 View Safety Data Sheet</a>
                         ) : (
                           <p className="text-gray-500 text-sm mt-2">No SDS document on file.</p>
                         )}

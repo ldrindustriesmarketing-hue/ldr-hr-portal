@@ -46,7 +46,7 @@ export default function PendingCertificationsPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from('certifications')
-        .select('*')
+        .select('id, title, issuer, issue_date, expiry_date, status, source, rejection_reason, employee_id')
         .eq('source', 'employee')
         .order('issue_date', { ascending: false });
 

@@ -43,7 +43,7 @@ export default function MyReportsPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from('hazard_reports')
-        .select('*')
+        .select('id, hazard_name, location, severity, status, created_at')
         .eq('submitted_by', userId)
         .order('created_at', { ascending: false });
 

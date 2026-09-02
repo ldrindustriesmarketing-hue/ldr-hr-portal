@@ -12,7 +12,6 @@ interface Report {
   description: string;
   severity: string | null;
   status: string | null;
-  image_data: string;
   created_at: string;
 }
 
@@ -21,6 +20,8 @@ export default function AllReportsPage() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [imageCache, setImageCache] = useState<Record<string, string>>({});
+  const [imageLoadingId, setImageLoadingId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,7 +36,10 @@ export default function AllReportsPage() {
   async function fetchReports() {
     try {
       setLoading(true);
-      let query = supabase.from('hazard_reports').select('*').order('created_at', { ascending: false });
+      let query = supabase
+        .from('hazard_reports')
+        .select('id, hazard_name, location, description, severity, status, created_at')
+        .order('created_at', { ascending: false });
 
       if (filterStatus !== 'all') {
         query = query.eq('status', filterStatus);
@@ -53,6 +57,23 @@ export default function AllReportsPage() {
 
   function handleFilter(status: string) {
     setFilterStatus(status);
+  }
+
+  async function toggleExpand(id: string) {
+    const opening = expandedId !== id;
+    setExpandedId(opening ? id : null);
+
+    if (opening && !(id in imageCache)) {
+      setImageLoadingId(id);
+      try {
+        const { data } = await supabase.from('hazard_reports').select('image_data').eq('id', id).single();
+        setImageCache((prev) => ({ ...prev, [id]: data?.image_data || '' }));
+      } catch (err) {
+        console.error('Error fetching report photo:', err);
+      } finally {
+        setImageLoadingId(null);
+      }
+    }
   }
 
   async function updateStatus(id: string, newStatus: string) {
@@ -125,7 +146,7 @@ export default function AllReportsPage() {
                         )}
                       </div>
                     </div>
-                    <button onClick={() => setExpandedId(expandedId === report.id ? null : report.id)} className="font-semibold">
+                    <button onClick={() => toggleExpand(report.id)} className="font-semibold">
                       {expandedId === report.id ? '▼' : '▶'}
                     </button>
                   </div>
@@ -136,12 +157,14 @@ export default function AllReportsPage() {
                       {report.severity && <p><strong>Severity:</strong> {report.severity}</p>}
                       {report.status && <p><strong>Status:</strong> {report.status}</p>}
 
-                      {report.image_data && (
+                      {imageLoadingId === report.id ? (
+                        <p className="text-gray-500 text-sm">Loading photo...</p>
+                      ) : imageCache[report.id] ? (
                         <div>
                           <p className="font-semibold mb-2">Photo</p>
-                          <img src={report.image_data} alt="Report" className="max-w-sm rounded" />
+                          <img src={imageCache[report.id]} alt="Report" className="max-w-sm rounded" />
                         </div>
-                      )}
+                      ) : null}
 
                       <div>
                         <label className="block font-semibold mb-2">Update Status</label>

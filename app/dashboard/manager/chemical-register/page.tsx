@@ -14,7 +14,6 @@ interface ChemicalEntry {
   quantity: string | null;
   hazard_classification: string | null;
   sds_review_date: string | null;
-  sds_document: string | null;
   status: string;
 }
 
@@ -39,7 +38,10 @@ export default function ChemicalRegisterPage() {
   async function fetchChemicals() {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from('chemical_register').select('*').order('product_name', { ascending: true });
+      const { data, error } = await supabase
+        .from('chemical_register')
+        .select('id, product_name, manufacturer, location, quantity, hazard_classification, sds_review_date, status')
+        .order('product_name', { ascending: true });
       if (error) throw error;
       setChemicals(data || []);
     } catch (err) {
