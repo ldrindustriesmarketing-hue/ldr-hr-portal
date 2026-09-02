@@ -10,7 +10,6 @@ interface NearMiss {
   what_could_have_happened: string;
   contributing_factors: string;
   location: string;
-  image_data: string;
   status: string;
   created_at: string;
 }
@@ -20,6 +19,8 @@ export default function AllNearMissPage() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [imageCache, setImageCache] = useState<Record<string, string>>({});
+  const [imageLoadingId, setImageLoadingId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,7 +36,10 @@ export default function AllNearMissPage() {
   async function fetchNearMisses() {
     try {
       setLoading(true);
-      let query = supabase.from('near_miss_reports').select('*').order('created_at', { ascending: false });
+      let query = supabase
+        .from('near_miss_reports')
+        .select('id, what_could_have_happened, contributing_factors, location, status, created_at')
+        .order('created_at', { ascending: false });
 
       if (filterStatus !== 'all') {
         query = query.eq('status', filterStatus);
@@ -61,7 +65,21 @@ export default function AllNearMissPage() {
       'near_miss_report',
       { action: 'manager_viewed', timestamp: new Date().toISOString() }
     );
-    setExpandedId(expandedId === reportId ? null : reportId);
+
+    const opening = expandedId !== reportId;
+    setExpandedId(opening ? reportId : null);
+
+    if (opening && !(reportId in imageCache)) {
+      setImageLoadingId(reportId);
+      try {
+        const { data } = await supabase.from('near_miss_reports').select('image_data').eq('id', reportId).single();
+        setImageCache((prev) => ({ ...prev, [reportId]: data?.image_data || '' }));
+      } catch (err) {
+        console.error('Error fetching report photo:', err);
+      } finally {
+        setImageLoadingId(null);
+      }
+    }
   }
 
   async function updateStatus(id: string, newStatus: string) {
@@ -146,12 +164,14 @@ export default function AllNearMissPage() {
                         <p className="text-gray-600">{report.contributing_factors}</p>
                       </div>
 
-                      {report.image_data && (
+                      {imageLoadingId === report.id ? (
+                        <p className="text-gray-500 text-sm">Loading photo...</p>
+                      ) : imageCache[report.id] ? (
                         <div>
                           <p className="font-semibold text-gray-700 mb-2">Photo</p>
-                          <img src={report.image_data} alt="Report photo" className="max-w-sm rounded-lg" />
+                          <img src={imageCache[report.id]} alt="Report photo" className="max-w-sm rounded-lg" />
                         </div>
-                      )}
+                      ) : null}
 
                       <div className="mt-4 pt-4 border-t">
                         <label className="block text-gray-700 font-semibold mb-2">Update Status</label>
