@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, getAuthHeaders } from '@/lib/supabase';
 import { logAudit } from '@/lib/audit';
 
 interface Assessment {
@@ -72,6 +72,8 @@ export default function AssignAssessmentsPage() {
 
     try {
       const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      const assessmentTitle = assessments.find((a) => a.id === selectedAssessment)?.title || 'Assessment';
+      const authHeaders = await getAuthHeaders();
 
       for (const empId of selectedEmployees) {
         const { data, error: insertError } = await supabase
@@ -94,6 +96,21 @@ export default function AssignAssessmentsPage() {
           'assessment_assignment',
           { assessment_type: assessmentType, employee_count: selectedEmployees.length, due_date: dueDate }
         );
+
+        const employee = employees.find((e) => e.id === empId);
+        if (employee?.email) {
+          fetch('/api/emails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify({
+              type: 'assessment-assigned',
+              employeeEmail: employee.email,
+              employeeName: employee.name,
+              assessmentTitle,
+              dueDate
+            })
+          }).catch((err) => console.error('Error sending assignment email:', err));
+        }
       }
 
       router.push('/dashboard/manager');

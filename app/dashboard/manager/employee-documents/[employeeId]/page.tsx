@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, getAuthHeaders } from '@/lib/supabase';
 import { logAudit } from '@/lib/audit';
 
 interface Employee {
@@ -66,6 +66,13 @@ export default function EmployeeDocumentsDetailPage() {
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState('');
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -221,6 +228,49 @@ export default function EmployeeDocumentsDetailPage() {
     }
   }
 
+  async function handleSendFollowUp(e: React.FormEvent) {
+    e.preventDefault();
+    setEmailError('');
+    setEmailSent(false);
+
+    if (!emailSubject.trim() || !emailMessage.trim()) {
+      setEmailError('Please enter a subject and message');
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const authHeaders = await getAuthHeaders();
+      const res = await fetch('/api/emails/followup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({
+          employeeEmail: employee!.email,
+          employeeName: employee!.name,
+          subject: emailSubject,
+          message: emailMessage
+        })
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to send email');
+      }
+
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      await logAudit('followup_email_sent', userData.id, employeeId, 'employee', { subject: emailSubject });
+
+      setEmailSent(true);
+      setEmailSubject('');
+      setEmailMessage('');
+    } catch (err: any) {
+      console.error('Error sending follow-up email:', err);
+      setEmailError(err?.message || 'Failed to send email');
+    } finally {
+      setSendingEmail(false);
+    }
+  }
+
   if (loading) return <div className="p-8 text-center">Loading...</div>;
   if (error || !employee) return <div className="p-8 text-center text-red-600">{error || 'Employee not found'}</div>;
 
@@ -233,8 +283,45 @@ export default function EmployeeDocumentsDetailPage() {
             <h1 className="text-4xl font-bold" style={{ color: '#f89939' }}>{employee.name}</h1>
             <p className="text-gray-600 text-sm mt-1">{employee.email} · {employee.department}</p>
           </div>
-          <button onClick={() => router.back()} className="text-gray-600 hover:text-gray-800 font-semibold">← Back</button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setShowEmailForm(!showEmailForm)} style={{ backgroundColor: '#f89939' }} className="px-4 py-2 text-white rounded-lg font-semibold hover:opacity-90 text-sm">✉️ Send Follow-up Email</button>
+            <button onClick={() => router.back()} className="text-gray-600 hover:text-gray-800 font-semibold">← Back</button>
+          </div>
         </div>
+
+        {showEmailForm && (
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 className="text-xl font-bold mb-4" style={{ color: '#f89939' }}>Send Follow-up Email to {employee.name}</h2>
+
+            {emailError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm">{emailError}</p>
+              </div>
+            )}
+            {emailSent && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-700 text-sm">✅ Email sent to {employee.email}.</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSendFollowUp} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 text-sm font-semibold mb-1">Subject</label>
+                <input type="text" value={emailSubject} onChange={(e) => setEmailSubject(e.target.value)} className="w-full px-4 py-2 border rounded-lg text-black" placeholder="e.g., Reminder: outstanding training sign-off" disabled={sendingEmail} />
+              </div>
+              <div>
+                <label className="block text-gray-700 text-sm font-semibold mb-1">Message</label>
+                <textarea value={emailMessage} onChange={(e) => setEmailMessage(e.target.value)} className="w-full px-4 py-2 border rounded-lg text-black" rows={5} placeholder="Write your message..." disabled={sendingEmail} />
+              </div>
+              <div className="flex gap-3">
+                <button type="submit" disabled={sendingEmail} style={{ backgroundColor: '#f89939' }} className="px-6 py-2 text-white rounded-lg font-semibold hover:opacity-90 disabled:opacity-50">
+                  {sendingEmail ? 'Sending...' : 'Send Email'}
+                </button>
+                <button type="button" onClick={() => setShowEmailForm(false)} className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300">Cancel</button>
+              </div>
+            </form>
+          </div>
+        )}
 
         <div className="space-y-6">
           <div className="bg-white rounded-lg shadow-lg p-6">

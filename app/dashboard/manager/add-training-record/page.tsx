@@ -2,13 +2,14 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, getAuthHeaders } from '@/lib/supabase';
 import { logAudit } from '@/lib/audit';
 import { compressImageFile } from '@/lib/image';
 
 interface Employee {
   id: string;
   name: string;
+  email: string;
 }
 
 export default function AddTrainingRecordPage() {
@@ -50,7 +51,7 @@ function AddTrainingRecordForm() {
   async function fetchEmployees() {
     try {
       setLoadingData(true);
-      const { data, error: fetchError } = await supabase.from('employees').select('id, name').order('name', { ascending: true });
+      const { data, error: fetchError } = await supabase.from('employees').select('id, name, email').order('name', { ascending: true });
       if (fetchError) throw fetchError;
       setEmployees(data || []);
     } catch (err) {
@@ -105,6 +106,21 @@ function AddTrainingRecordForm() {
       if (insertError) throw insertError;
 
       await logAudit('training_record_created', userData.id, data[0].id, 'training_record', { employee_id: employeeId, title });
+
+      const employee = employees.find((e) => e.id === employeeId);
+      if (employee?.email) {
+        const authHeaders = await getAuthHeaders();
+        fetch('/api/emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({
+            type: 'training-assigned',
+            employeeEmail: employee.email,
+            employeeName: employee.name,
+            trainingTitle: title
+          })
+        }).catch((err) => console.error('Error sending training assigned email:', err));
+      }
 
       router.push(`/dashboard/manager/employee-documents/${employeeId}`);
     } catch (err) {

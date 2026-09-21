@@ -2,13 +2,14 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase, getAuthHeaders } from '@/lib/supabase';
 import { logAudit } from '@/lib/audit';
 import { compressImageFile } from '@/lib/image';
 
 interface Employee {
   id: string;
   name: string;
+  email: string;
 }
 
 export default function AddCertificationPage() {
@@ -51,7 +52,7 @@ function AddCertificationForm() {
   async function fetchEmployees() {
     try {
       setLoadingData(true);
-      const { data, error: fetchError } = await supabase.from('employees').select('id, name').order('name', { ascending: true });
+      const { data, error: fetchError } = await supabase.from('employees').select('id, name, email').order('name', { ascending: true });
       if (fetchError) throw fetchError;
       setEmployees(data || []);
     } catch (err) {
@@ -107,6 +108,21 @@ function AddCertificationForm() {
       if (insertError) throw insertError;
 
       await logAudit('certification_created', userData.id, data[0].id, 'certification', { employee_id: employeeId, title });
+
+      const employee = employees.find((e) => e.id === employeeId);
+      if (employee?.email) {
+        const authHeaders = await getAuthHeaders();
+        fetch('/api/emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          body: JSON.stringify({
+            type: 'certification-assigned',
+            employeeEmail: employee.email,
+            employeeName: employee.name,
+            certificationTitle: title
+          })
+        }).catch((err) => console.error('Error sending certification assigned email:', err));
+      }
 
       router.push(`/dashboard/manager/employee-documents/${employeeId}`);
     } catch (err) {

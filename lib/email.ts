@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const APP_URL = 'https://whs.ldrindustries.com.au';
 
 export async function sendAssessmentAssignedEmail(
   employeeEmail: string,
@@ -51,7 +52,7 @@ export async function sendAssessmentAssignedEmail(
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="http://localhost:3000/dashboard/employee/my-assessments" style="background-color: #f89939; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              <a href="${APP_URL}/dashboard/employee/my-assessments" style="background-color: #f89939; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
                 View Assessment
               </a>
             </div>
@@ -119,7 +120,7 @@ export async function sendReportSubmittedEmail(
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="http://localhost:3000/dashboard/manager/all-reports" style="background-color: #f89939; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              <a href="${APP_URL}/dashboard/manager/all-reports" style="background-color: #f89939; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
                 View Report
               </a>
             </div>
@@ -186,7 +187,7 @@ export async function sendAssessmentSignedEmail(
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="http://localhost:3000/dashboard/manager" style="background-color: #f89939; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              <a href="${APP_URL}/dashboard/manager" style="background-color: #f89939; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
                 View Signed Assessments
               </a>
             </div>
@@ -212,6 +213,197 @@ export async function sendAssessmentSignedEmail(
     return result;
   } catch (error) {
     console.error('Error sending assessment signed email:', error);
+    return null;
+  }
+}
+
+export async function sendTrainingAssignedEmail(
+  employeeEmail: string,
+  employeeName: string,
+  trainingTitle: string
+) {
+  try {
+    console.log(`Sending training assigned email to: ${employeeEmail}`);
+
+    const result = await resend.emails.send({
+      from: 'hr@ldrindustries.com.au',
+      to: employeeEmail,
+      subject: `New Training Record: ${trainingTitle}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #f89939; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0;">New Training Record</h1>
+          </div>
+
+          <div style="background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px;">
+            <p style="color: #333; font-size: 16px;">Hi <strong>${employeeName}</strong>,</p>
+
+            <p style="color: #555; font-size: 15px; line-height: 1.6;">
+              A new training record has been added for you to review and sign:
+            </p>
+
+            <div style="background-color: white; padding: 15px; border-left: 4px solid #f89939; margin: 20px 0;">
+              <p style="margin: 0; color: #333; font-size: 16px; font-weight: bold;">
+                🎓 ${trainingTitle}
+              </p>
+            </div>
+
+            <p style="color: #555; font-size: 15px; line-height: 1.6; margin-top: 20px;">
+              Please log in to the WHS Portal to review and sign off.
+            </p>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${APP_URL}/dashboard/employee/my-training" style="background-color: #f89939; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                View Training Record
+              </a>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+            <p style="color: #999; font-size: 13px; margin: 0;">
+              Best regards,<br>
+              <strong>LDR Industries WHS Team</strong>
+            </p>
+          </div>
+        </div>
+      `
+    });
+
+    if (result.error) {
+      console.error('Email error:', result.error);
+      return null;
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error sending training assigned email:', error);
+    return null;
+  }
+}
+
+export async function sendCertificationAssignedEmail(
+  employeeEmail: string,
+  employeeName: string,
+  certificationTitle: string
+) {
+  try {
+    console.log(`Sending certification assigned email to: ${employeeEmail}`);
+
+    const result = await resend.emails.send({
+      from: 'hr@ldrindustries.com.au',
+      to: employeeEmail,
+      subject: `New Certification Record: ${certificationTitle}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #f89939; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0;">New Certification Record</h1>
+          </div>
+
+          <div style="background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px;">
+            <p style="color: #333; font-size: 16px;">Hi <strong>${employeeName}</strong>,</p>
+
+            <p style="color: #555; font-size: 15px; line-height: 1.6;">
+              A new certification record has been added for you to review and sign:
+            </p>
+
+            <div style="background-color: white; padding: 15px; border-left: 4px solid #f89939; margin: 20px 0;">
+              <p style="margin: 0; color: #333; font-size: 16px; font-weight: bold;">
+                📜 ${certificationTitle}
+              </p>
+            </div>
+
+            <p style="color: #555; font-size: 15px; line-height: 1.6; margin-top: 20px;">
+              Please log in to the WHS Portal to review and sign off.
+            </p>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${APP_URL}/dashboard/employee/my-certifications" style="background-color: #f89939; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                View Certification Record
+              </a>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+            <p style="color: #999; font-size: 13px; margin: 0;">
+              Best regards,<br>
+              <strong>LDR Industries WHS Team</strong>
+            </p>
+          </div>
+        </div>
+      `
+    });
+
+    if (result.error) {
+      console.error('Email error:', result.error);
+      return null;
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error sending certification assigned email:', error);
+    return null;
+  }
+}
+
+export async function sendFollowUpEmail(
+  employeeEmail: string,
+  employeeName: string,
+  managerName: string,
+  subject: string,
+  message: string
+) {
+  try {
+    console.log(`Sending follow-up email to: ${employeeEmail}`);
+
+    // message comes from a manager-authored textarea; escape it before
+    // interpolating into HTML, then restore line breaks.
+    const escaped = message
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const messageHtml = escaped.replace(/\n/g, '<br>');
+
+    const result = await resend.emails.send({
+      from: 'hr@ldrindustries.com.au',
+      to: employeeEmail,
+      subject,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #f89939; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0;">Message from ${managerName}</h1>
+          </div>
+
+          <div style="background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px;">
+            <p style="color: #333; font-size: 16px;">Hi <strong>${employeeName}</strong>,</p>
+
+            <div style="background-color: white; padding: 20px; border-left: 4px solid #f89939; margin: 20px 0; color: #333; font-size: 15px; line-height: 1.6;">
+              ${messageHtml}
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${APP_URL}/dashboard/employee" style="background-color: #f89939; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                Go to WHS Portal
+              </a>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+            <p style="color: #999; font-size: 13px; margin: 0;">
+              Sent by <strong>${managerName}</strong> via the LDR Industries WHS Portal.
+            </p>
+          </div>
+        </div>
+      `
+    });
+
+    if (result.error) {
+      console.error('Email error:', result.error);
+      return null;
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error sending follow-up email:', error);
     return null;
   }
 }
