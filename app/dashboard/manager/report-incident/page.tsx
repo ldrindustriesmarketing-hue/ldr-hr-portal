@@ -79,7 +79,8 @@ export default function ManagerReportIncidentPage() {
       router.push('/dashboard/manager');
     } catch (err) {
       console.error('Error submitting report:', err);
-      setError('Failed to submit report');
+      const e = err as { message?: string; details?: string; hint?: string };
+      setError(`Failed to submit report: ${[e?.message, e?.details, e?.hint].filter(Boolean).join(' — ') || String(err)}`);
     } finally {
       setLoading(false);
     }
